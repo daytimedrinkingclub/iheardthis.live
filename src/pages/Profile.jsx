@@ -7,7 +7,9 @@ import Spinner from '../components/Spinner';
 export default function Profile() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState(null);
   const [profile, setProfile] = useState({
+    username: '',
     name: '',
     country: '',
     twitter_url: '',
@@ -15,6 +17,7 @@ export default function Profile() {
     soundcloud_url: '',
     youtube_url: ''
   });
+  const [usernameError, setUsernameError] = useState('');
 
   useEffect(() => {
     loadProfile();
@@ -24,6 +27,7 @@ export default function Profile() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+      setUser(user);
 
       const { data, error } = await supabase
         .from('profiles')
@@ -42,6 +46,10 @@ export default function Profile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (usernameError) {
+      toast.error('Username already taken');
+      return;
+    }
     setSaving(true);
 
     try {
@@ -49,6 +57,7 @@ export default function Profile() {
       if (!user) throw new Error('Not authenticated');
 
       const updateData = {
+        username: profile.username,
         name: profile.name,
         country: profile.country,
         twitter_url: profile.twitter_url,
@@ -62,11 +71,22 @@ export default function Profile() {
         .update(updateData)
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {  // Unique constraint violation
+          toast.error('This username is already taken.');
+        } else if (error.code === '23514') {  // Check constraint violation
+          toast.error('Please check your input values and try again.');
+        } else {
+          toast.error('Unable to update profile. Please try again later.');
+        }
+        console.error('Backend error:', error);
+        return;
+      }
+
       toast.success('Profile updated successfully');
     } catch (error) {
       console.error('Error:', error);
-      toast.error(error.message);
+      toast.error('Unable to update profile. Please try again later.');
     } finally {
       setSaving(false);
     }
@@ -81,6 +101,42 @@ export default function Profile() {
       <h1 className="text-2xl font-bold mb-8">Profile Settings</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Username *
+          </label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">@</span>
+            <input
+              type="text"
+              required
+              value={profile.username}
+              onChange={async (e) => {
+                const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                setProfile({ ...profile, username: value });
+                setUsernameError('');
+              }}
+              onBlur={async (e) => {
+                if (!e.target.value) return;
+                const { data, error } = await supabase
+                  .from('profiles')
+                  .select('username')
+                  .eq('username', e.target.value)
+                  .neq('id', user.id)
+                  .single();
+                
+                if (data) {
+                  setUsernameError('Username already taken');
+                }
+              }}
+              className={`w-full px-4 py-2 pl-8 bg-dark border ${
+                usernameError ? 'border-red-500' : 'border-gray-700'
+              } rounded-lg text-white focus:outline-none focus:border-neon-pink`}
+              placeholder="username"
+            />
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1">
             Name
