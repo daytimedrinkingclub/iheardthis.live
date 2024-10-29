@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const PLACEHOLDER_IMAGE = 'https://placehold.co/400x400/1a1a1a/ffffff?text=Artist';
+
 export default function ArtistSearch() {
   const [searchTerm, setSearchTerm] = useState('');
   const [artists, setArtists] = useState([]);
@@ -71,39 +73,80 @@ export default function ArtistSearch() {
     return () => clearTimeout(timeoutId);
   }, [searchTerm, token]);
 
+  const handleImageError = (e) => {
+    e.target.src = PLACEHOLDER_IMAGE;
+  };
+
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-2xl mx-auto relative">
+      {/* Decorative gradient background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-neon-pink/20 via-transparent to-neon-blue/20 opacity-50"></div>
+      </div>
+
       <input
         type="text"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         placeholder="Search for an artist"
-        className="w-full px-4 py-2 text-gray-700 bg-white border rounded-lg focus:outline-none focus:border-blue-500"
+        className="w-full px-6 py-3 text-white bg-dark-card border border-gray-700 rounded-xl 
+                 focus:outline-none focus:border-neon-pink focus:ring-2 focus:ring-neon-pink/50
+                 backdrop-blur-xl shadow-lg"
       />
       
       {loading && (
-        <div className="mt-4 text-center text-gray-600">
+        <div className="mt-4 text-center text-neon-blue animate-pulse">
           Searching...
         </div>
       )}
 
       {artists.length > 0 && (
-        <div className="mt-4 space-y-4">
+        <div className="mt-6 space-y-4">
           {artists.map((artist) => (
             <div 
               key={artist.id}
-              className="flex items-center p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+              className="group flex items-center p-6 rounded-xl cursor-pointer
+                       bg-dark-card backdrop-blur-xl border border-gray-800/50
+                       hover:bg-dark-card/80 hover:border-neon-pink/50 
+                       transition-all duration-300 ease-out
+                       hover:shadow-lg hover:shadow-neon-pink/10"
             >
               <img 
-                src={artist.images[0]?.url || '/placeholder-artist.png'} 
+                src={artist.images[0]?.url || PLACEHOLDER_IMAGE}
+                onError={handleImageError}
                 alt={artist.name}
-                className="w-16 h-16 rounded-full object-cover"
+                className="w-20 h-20 rounded-xl object-cover 
+                         group-hover:scale-105 transition-transform duration-300
+                         shadow-lg"
               />
-              <div className="ml-4">
-                <h3 className="font-semibold text-lg">{artist.name}</h3>
-                <p className="text-sm text-gray-600">
+              <div className="ml-6 flex-1">
+                <h3 className="font-bold text-xl text-white group-hover:text-neon-pink transition-colors">
+                  {artist.name}
+                </h3>
+                <p className="text-sm text-gray-400">
                   {artist.followers.total.toLocaleString()} followers
                 </p>
+                {artist.genres && artist.genres.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {artist.genres.slice(0, 3).map((genre) => (
+                      <span 
+                        key={genre}
+                        className="px-2 py-1 text-xs rounded-full 
+                                 bg-neon-blue/10 text-neon-blue border border-neon-blue/20"
+                      >
+                        {genre}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Popularity indicator */}
+              <div className="ml-4 w-12 h-12 rounded-full flex items-center justify-center
+                            border-2 border-neon-blue/30 group-hover:border-neon-blue
+                            transition-colors">
+                <span className="text-sm font-medium text-neon-blue">
+                  {artist.popularity}%
+                </span>
               </div>
             </div>
           ))}
