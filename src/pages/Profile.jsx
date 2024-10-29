@@ -137,7 +137,7 @@ export default function Profile() {
         return;
       }
 
-      toast.success('Profile updated successfully');
+      toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Error:', error);
       toast.error('Unable to update profile. Please try again later.');
@@ -206,9 +206,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-8">Profile Settings</h1>
-
+    <div className="container mt-20 mx-auto px-4 py-8 max-w-2xl">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Avatar Upload Section */}
         <div className="flex flex-col items-center space-y-4">

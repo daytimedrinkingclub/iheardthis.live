@@ -75,3 +75,14 @@
   left: 0;
   z-index: 0;
 }
+
+/* Add this to your existing animations in index.css */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+.shake {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}

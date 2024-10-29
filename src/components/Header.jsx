@@ -15,12 +15,14 @@ export default function Header({ onAuthClick }) {
   };
 
   return (
-    <header className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl 
+    <header
+      className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-2xl 
                        backdrop-blur-md bg-white/10 dark:bg-gray-900/50
                        rounded-2xl shadow-lg border border-white/20
                        px-2 py-1 z-50
-                       transition-all duration-300 ease-in-out">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+                       transition-all duration-300 ease-in-out"
+    >
+      <div className="mx-auto px-4 h-16 flex items-center justify-between">
         <h1
           onClick={() =>
             navigate(user ? `/${profile?.username || user.id}` : "/")
@@ -231,7 +233,13 @@ export default function Header({ onAuthClick }) {
           </div>
         ) : (
           <button
-            onClick={onAuthClick}
+            onClick={() => {
+              if (window.location.pathname !== '/') {
+                navigate('/');
+              } else {
+                onAuthClick();
+              }
+            }}
             className="px-4 py-2 bg-neon-pink/20 border border-neon-pink 
                      text-neon-pink rounded-lg hover:bg-neon-pink/30
                      text-sm sm:text-base"
