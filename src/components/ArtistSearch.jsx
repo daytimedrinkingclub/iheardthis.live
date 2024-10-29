@@ -160,6 +160,21 @@ export default function ArtistSearch({ onAuthRequired }) {
     fetchRecentUsers();
   }, []);
 
+  useEffect(() => {
+    if (selectedArtist) {
+      // Disable scroll
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Re-enable scroll
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup function to re-enable scroll when component unmounts
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedArtist]);
+
   return (
     <div className="animated-gradient-transparent min-h-screen">
       <div className="noise" />
@@ -459,14 +474,18 @@ export default function ArtistSearch({ onAuthRequired }) {
             )}
 
             {selectedArtist && (
-              <AddExperienceModal
-                artist={selectedArtist}
-                existingExperience={selectedArtist.existingExperience}
-                onClose={() => setSelectedArtist(null)}
-                onSuccess={() => {
-                  console.log("Experience added successfully!");
-                }}
-              />
+              <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100]">
+                <div className="min-h-screen px-4 flex items-center justify-center">
+                  <AddExperienceModal
+                    artist={selectedArtist}
+                    existingExperience={selectedArtist.existingExperience}
+                    onClose={() => setSelectedArtist(null)}
+                    onSuccess={() => {
+                      console.log("Experience added successfully!");
+                    }}
+                  />
+                </div>
+              </div>
             )}
           </div>
         </div>
