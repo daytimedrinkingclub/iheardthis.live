@@ -77,6 +77,11 @@ export default function ArtistSearch() {
     e.target.src = PLACEHOLDER_IMAGE;
   };
 
+  const addArtistToProfile = (artist) => {
+    console.log('Adding artist to profile:', artist.name);
+    // TODO: Implement actual functionality
+  };
+
   return (
     <div className="w-full max-w-2xl mx-auto relative">
       {/* Decorative gradient background */}
@@ -84,28 +89,34 @@ export default function ArtistSearch() {
         <div className="absolute inset-0 bg-gradient-to-br from-neon-pink/20 via-transparent to-neon-blue/20 opacity-50"></div>
       </div>
 
-      <input
-        type="text"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder="Search for an artist"
-        className="w-full px-6 py-3 text-white bg-dark-card border border-gray-700 rounded-xl 
-                 focus:outline-none focus:border-neon-pink focus:ring-2 focus:ring-neon-pink/50
-                 backdrop-blur-xl shadow-lg"
-      />
-      
-      {loading && (
-        <div className="mt-4 text-center text-neon-blue animate-pulse">
-          Searching...
+      {/* Sticky search container */}
+      <div className="sticky top-0 py-4 z-10">
+        <div className="bg-dark/80 backdrop-blur-md px-4 py-4 rounded-2xl border border-gray-800/50">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search for an artist"
+            className="w-full px-6 py-3 text-white bg-dark-card/50 border border-gray-700 rounded-xl 
+                     focus:outline-none focus:border-neon-pink focus:ring-2 focus:ring-neon-pink/50
+                     shadow-lg"
+          />
+          
+          {loading && (
+            <div className="mt-4 text-center text-neon-blue animate-pulse">
+              Searching...
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
+      {/* Results section */}
       {artists.length > 0 && (
-        <div className="mt-6 space-y-4">
+        <div className="mt-2 space-y-4">
           {artists.map((artist) => (
             <div 
               key={artist.id}
-              className="group flex items-center p-6 rounded-xl cursor-pointer
+              className="group flex items-center p-6 rounded-xl
                        bg-dark-card backdrop-blur-xl border border-gray-800/50
                        hover:bg-dark-card/80 hover:border-neon-pink/50 
                        transition-all duration-300 ease-out
@@ -140,14 +151,28 @@ export default function ArtistSearch() {
                   </div>
                 )}
               </div>
-              {/* Popularity indicator */}
-              <div className="ml-4 w-12 h-12 rounded-full flex items-center justify-center
-                            border-2 border-neon-blue/30 group-hover:border-neon-blue
-                            transition-colors">
-                <span className="text-sm font-medium text-neon-blue">
-                  {artist.popularity}%
+              {/* Add to Profile Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addArtistToProfile(artist);
+                }}
+                className="relative ml-4 w-12 h-12 rounded-full flex items-center justify-center
+                          bg-neon-pink/10 border-2 border-neon-pink/30 
+                          hover:border-neon-pink group/btn
+                          focus:outline-none focus:ring-2 focus:ring-neon-pink/50"
+                aria-label="Add artist to profile"
+              >
+                {/* Ripple effect */}
+                <span className="absolute inset-0 rounded-full opacity-0 group-hover/btn:opacity-100
+                               before:absolute before:inset-0 before:rounded-full
+                               before:border-2 before:border-neon-pink/50
+                               before:animate-ping" />
+                {/* Plus icon */}
+                <span className="text-4xl leading-none text-neon-pink -mt-1">
+                  +
                 </span>
-              </div>
+              </button>
             </div>
           ))}
         </div>
