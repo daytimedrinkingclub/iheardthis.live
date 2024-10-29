@@ -51,7 +51,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100]">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[100]">
       <div className="bg-dark-card w-full max-w-md rounded-2xl border border-gray-800 p-8 mx-4 
                     transform transition-all">
         <div className="flex justify-between items-center mb-8">

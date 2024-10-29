@@ -2,10 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Add to your existing styles */
+/* Existing styles */
 .cosmic-bg {
   background: linear-gradient(to bottom right, #0f0f1a, #1a0f1a);
   background-attachment: fixed;
+}
+
+/* Animated gradient backgrounds */
+.animated-gradient {
+  @apply relative bg-dark overflow-hidden;
+}
+
+/* Add transparent version */
+.animated-gradient-transparent {
+  @apply relative overflow-hidden;
+  background: rgba(18, 18, 18, 0.95);
+  backdrop-filter: blur(20px);
+}
+
+/* Shared gradient styles - Made more subtle */
+.animated-gradient::before,
+.animated-gradient-transparent::before {
+  @apply absolute inset-0;
+  content: '';
+  background: radial-gradient(circle at center, 
+    theme(colors.neon-pink/5),
+    theme(colors.neon-blue/3),
+    transparent 40%);
+  animation: gradient-shift 30s ease infinite;
+  z-index: 0;
+}
+
+.animated-gradient::after,
+.animated-gradient-transparent::after {
+  @apply absolute inset-0;
+  content: '';
+  background: radial-gradient(circle at center, 
+    theme(colors.neon-blue/3),
+    theme(colors.neon-pink/5),
+    transparent 40%);
+  animation: gradient-shift 30s ease infinite reverse;
+  z-index: 0;
+}
+
+@keyframes gradient-shift {
+  0% {
+    transform: translate(0, 0) scale(1.5);
+  }
+  33% {
+    transform: translate(-15%, 15%) scale(1.5);
+  }
+  66% {
+    transform: translate(15%, -15%) scale(1.5);
+  }
+  100% {
+    transform: translate(0, 0) scale(1.5);
+  }
+}
+
+/* Add noise texture with reduced opacity */
+.noise {
+  @apply absolute inset-0 opacity-[0.01];
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  pointer-events: none;
 }
 
 #tsparticles {
