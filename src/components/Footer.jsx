@@ -2,14 +2,17 @@ export default function Footer() {
   return (
     <footer className="py-6 border-t border-gray-800 mt-auto">
       <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-2 text-sm text-gray-400">
-        <span>Hobby project by</span>
-        <a
-          href="https://anujsh.com"
-          target="_blank"
-          className="text-neon-pink hover:text-neon-pink/80 transition-colors"
-        >
-          Anuj Sharma
-        </a>
+        <span>
+          Hobby project by{" "}
+          <a
+            href="https://anujsh.com"
+            target="_blank"
+            className="text-neon-pink hover:text-neon-pink/80 transition-colors"
+          >
+            Anuj Sharma
+          </a>
+        </span>
+
         <span className="hidden sm:inline">|</span>
         <a
           href="https://github.com/daytimedrinkingclub/iheardthis.live"

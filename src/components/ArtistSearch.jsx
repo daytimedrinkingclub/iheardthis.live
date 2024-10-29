@@ -7,13 +7,13 @@ import { useAuth } from '../contexts/AuthContext';
 
 const PLACEHOLDER_IMAGE = 'https://placehold.co/400x400/1a1a1a/ffffff?text=Artist';
 
-export default function ArtistSearch() {
+export default function ArtistSearch({ onAuthRequired }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [artists, setArtists] = useState([]);
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedArtist, setSelectedArtist] = useState(null);
-  const { userExperiences } = useAuth();
+  const { userExperiences, user } = useAuth();
 
   // Get Spotify access token on component mount
   useEffect(() => {
@@ -87,6 +87,12 @@ export default function ArtistSearch() {
   };
 
   const addArtistToProfile = async (artist, existingExperience) => {
+    // Check if user is logged in
+    if (!user) {
+      onAuthRequired();
+      return;
+    }
+
     try {
       // First ensure artist exists in our DB
       const { data: existingArtist, error: artistError } = await supabase

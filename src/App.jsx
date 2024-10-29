@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Profile from './pages/Profile';
@@ -10,19 +10,24 @@ import { AuthProvider } from './contexts/AuthContext';
 import PublicProfile from './pages/PublicProfile';
 
 function App() {
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Function to handle non-logged in user actions
+  const handleAuthRequired = () => {
+    setIsAuthModalOpen(true);
+  };
 
   return (
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-dark flex flex-col">
-          <Header onAuthClick={() => setShowAuthModal(true)} />
+          <Header onAuthClick={() => setIsAuthModalOpen(true)} />
           <main className="flex-1">
             <Routes>
               <Route path="/" element={
                 <div className="container mx-auto px-4">
                   <div className="flex flex-col items-center pt-20 pb-20">
-                    <ArtistSearch />
+                    <ArtistSearch onAuthRequired={handleAuthRequired} />
                   </div>
                 </div>
               } />
@@ -32,10 +37,10 @@ function App() {
           </main>
           <Footer />
           <AuthModal
-            isOpen={showAuthModal}
-            onClose={() => setShowAuthModal(false)}
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
             onSuccess={(userData) => {
-              setShowAuthModal(false);
+              setIsAuthModalOpen(false);
             }}
           />
           <Toaster position="bottom-center" theme="dark" />
