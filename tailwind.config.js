@@ -13,13 +13,19 @@ export default {
         'dark-card': 'rgba(16, 16, 16, 0.6)',
       },
       keyframes: {
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
+        soundwave: {
+          '0%, 100%': { 
+            height: '8px',
+            opacity: '0.5'
+          },
+          '50%': { 
+            height: '24px',
+            opacity: '1'
+          }
         }
       },
       animation: {
-        float: 'float 3s ease-in-out infinite',
+        soundwave: 'soundwave ease-in-out infinite',
       }
     },
   },

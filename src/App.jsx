@@ -1,16 +1,42 @@
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import Profile from './pages/Profile';
 import ArtistSearch from './components/ArtistSearch';
+import AuthModal from './components/AuthModal';
+import { useState } from 'react';
 
 function App() {
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
   return (
-    <div className="container mx-auto px-4 min-h-screen">
-      <div className="flex flex-col items-center pt-20 pb-20">
-        <h1 className="text-4xl font-bold mb-8 text-transparent bg-clip-text bg-gradient-to-r 
-                     from-neon-pink to-neon-blue animate-pulse">
-          I heard this live
-        </h1>
-        <ArtistSearch />
+    <Router>
+      <div className="min-h-screen bg-dark flex flex-col">
+        <Header onAuthClick={() => setShowAuthModal(true)} />
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={
+              <div className="container mx-auto px-4">
+                <div className="flex flex-col items-center pt-20 pb-20">
+                  <ArtistSearch />
+                </div>
+              </div>
+            } />
+            <Route path="/profile" element={<Profile />} />
+          </Routes>
+        </main>
+        <Footer />
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={(userData) => {
+            setShowAuthModal(false);
+          }}
+        />
+        <Toaster position="bottom-center" theme="dark" />
       </div>
-    </div>
+    </Router>
   );
 }
 

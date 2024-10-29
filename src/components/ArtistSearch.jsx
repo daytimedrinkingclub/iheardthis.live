@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { supabase } from '../lib/supabase';
+import AddExperienceModal from './AddExperienceModal';
+import WaveLoader from '../components/WaveLoader';
 
 const PLACEHOLDER_IMAGE = 'https://placehold.co/400x400/1a1a1a/ffffff?text=Artist';
 
@@ -8,6 +11,7 @@ export default function ArtistSearch() {
   const [artists, setArtists] = useState([]);
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedArtist, setSelectedArtist] = useState(null);
 
   // Get Spotify access token on component mount
   useEffect(() => {
@@ -77,9 +81,33 @@ export default function ArtistSearch() {
     e.target.src = PLACEHOLDER_IMAGE;
   };
 
-  const addArtistToProfile = (artist) => {
-    console.log('Adding artist to profile:', artist.name);
-    // TODO: Implement actual functionality
+  const addArtistToProfile = async (artist) => {
+    try {
+      // First ensure artist exists in our DB
+      const { data: existingArtist, error: artistError } = await supabase
+        .from('artists')
+        .select()
+        .eq('id', artist.id)
+        .single();
+
+      if (!existingArtist) {
+        // Insert artist if not exists
+        await supabase.from('artists').insert({
+          id: artist.id,
+          name: artist.name,
+          image_url: artist.images[0]?.url,
+          spotify_url: artist.external_urls.spotify,
+          genres: artist.genres
+        });
+      }
+
+      // Show modal/form to add experience details
+      setSelectedArtist(artist);
+      setShowExperienceModal(true);
+
+    } catch (error) {
+      console.error('Error adding artist:', error);
+    }
   };
 
   return (
@@ -116,11 +144,7 @@ export default function ArtistSearch() {
             )}
           </div>
           
-          {loading && (
-            <div className="mt-4 text-center text-neon-blue animate-pulse">
-              Searching...
-            </div>
-          )}
+          {loading && <WaveLoader text="Searching artists..." />}
         </div>
       </div>
 
@@ -221,6 +245,17 @@ export default function ArtistSearch() {
             </div>
           ))}
         </div>
+      )}
+
+      {selectedArtist && (
+        <AddExperienceModal
+          artist={selectedArtist}
+          onClose={() => setSelectedArtist(null)}
+          onSuccess={() => {
+            // TODO: Show success message
+            console.log('Experience added successfully!');
+          }}
+        />
       )}
     </div>
   );
