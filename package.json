@@ -10,15 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/react": "^1.7.18",
     "@supabase/supabase-js": "^2.46.0",
     "appwrite": "^16.0.2",
     "axios": "^1.6.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "spotify-web-api-node": "^5.0.2",
+    "react-router-dom": "^6.22.0",
+    "react-select": "^5.8.2",
+    "react-select-country-list": "^2.2.3",
     "sonner": "^1.4.0",
-    "@headlessui/react": "^1.7.18",
-    "react-router-dom": "^6.22.0"
+    "spotify-web-api-node": "^5.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
