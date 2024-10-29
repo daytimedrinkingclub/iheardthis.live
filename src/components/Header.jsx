@@ -1,50 +1,15 @@
-import { useState, useEffect } from 'react';
 import { Menu } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
 export default function Header({ onAuthClick }) {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Check for existing session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchProfile(session.user.id);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchProfile = async (userId) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    
-    if (data) setProfile(data);
-  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
     navigate('/');
     toast.success('Signed out successfully');
   };
@@ -74,7 +39,7 @@ export default function Header({ onAuthClick }) {
                                 rounded-lg shadow-lg overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-800">
                 <p className="text-sm text-gray-300 font-medium truncate">
-                  {profile?.name || user.email.split('@')[0]}
+                  {profile?.username ? `@${profile.username}` : user.email.split('@')[0]}
                 </p>
                 <p className="text-xs text-gray-500 truncate">{user.email}</p>
               </div>

@@ -31,7 +31,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
         }));
 
         if (error) throw error;
-        toast.success('Account created! Please check your email for verification.');
+        toast.success('Account created!');
       } else if (error) {
         throw error;
       } else {
