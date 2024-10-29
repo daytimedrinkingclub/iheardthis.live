@@ -6,14 +6,15 @@ const AuthContext = createContext({});
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [userExperiences, setUserExperiences] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and subscribe to auth changes
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
+        fetchUserExperiences(session.user.id);
       }
     });
 
@@ -21,8 +22,10 @@ export function AuthProvider({ children }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
+        fetchUserExperiences(session.user.id);
       } else {
         setProfile(null);
+        setUserExperiences([]);
       }
     });
 
@@ -41,6 +44,23 @@ export function AuthProvider({ children }) {
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
+    }
+  };
+
+  const fetchUserExperiences = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_artist_experiences')
+        .select(`
+          *,
+          artist:artists(*)
+        `)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      setUserExperiences(data);
+    } catch (error) {
+      console.error('Error fetching user experiences:', error);
     } finally {
       setLoading(false);
     }
@@ -49,8 +69,10 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     profile,
+    userExperiences,
     loading,
-    refreshProfile: () => user && fetchProfile(user.id)
+    refreshProfile: () => user && fetchProfile(user.id),
+    refreshExperiences: () => user && fetchUserExperiences(user.id)
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

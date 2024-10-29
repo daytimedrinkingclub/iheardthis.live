@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { supabase } from '../lib/supabase';
 import AddExperienceModal from './AddExperienceModal';
-import WaveLoader from '../components/WaveLoader';
+import WaveLoader from './WaveLoader';
+import { useAuth } from '../contexts/AuthContext';
 
 const PLACEHOLDER_IMAGE = 'https://placehold.co/400x400/1a1a1a/ffffff?text=Artist';
 
@@ -12,6 +13,7 @@ export default function ArtistSearch() {
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedArtist, setSelectedArtist] = useState(null);
+  const { userExperiences } = useAuth();
 
   // Get Spotify access token on component mount
   useEffect(() => {
@@ -39,49 +41,52 @@ export default function ArtistSearch() {
     getSpotifyToken();
   }, []);
 
-  // Search artists when user types
-  const searchArtists = async (value) => {
-    if (!value.trim() || !token) return;
-    
-    setLoading(true);
-    try {
-      const response = await axios.get(`https://api.spotify.com/v1/search`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        params: {
-          q: value,
-          type: 'artist',
-          limit: 10
-        }
-      });
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    async (value) => {
+      if (!value.trim() || !token) {
+        setArtists([]);
+        return;
+      }
       
-      setArtists(response.data.artists.items);
-    } catch (error) {
-      console.error('Error searching artists:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoading(true);
+      try {
+        const response = await axios.get(`https://api.spotify.com/v1/search`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          params: {
+            q: value,
+            type: 'artist',
+            limit: 10
+          }
+        });
+        
+        setArtists(response.data.artists.items);
+      } catch (error) {
+        console.error('Error searching artists:', error);
+        setArtists([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token]
+  );
 
-  // Debounce search to avoid too many API calls
+  // Handle search input with debouncing
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (searchTerm) {
-        searchArtists(searchTerm);
-      } else {
-        setArtists([]);
-      }
+      debouncedSearch(searchTerm);
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, token]);
+  }, [searchTerm, debouncedSearch]);
 
   const handleImageError = (e) => {
     e.target.src = PLACEHOLDER_IMAGE;
   };
 
-  const addArtistToProfile = async (artist) => {
+  const addArtistToProfile = async (artist, existingExperience) => {
     try {
       // First ensure artist exists in our DB
       const { data: existingArtist, error: artistError } = await supabase
@@ -97,17 +102,23 @@ export default function ArtistSearch() {
           name: artist.name,
           image_url: artist.images[0]?.url,
           spotify_url: artist.external_urls.spotify,
-          genres: artist.genres
+          genres: artist.genres,
+          followers: artist.followers.total
         });
       }
 
       // Show modal/form to add experience details
-      setSelectedArtist(artist);
-      setShowExperienceModal(true);
-
+      setSelectedArtist({
+        ...artist,
+        existingExperience
+      });
     } catch (error) {
       console.error('Error adding artist:', error);
     }
+  };
+
+  const getExistingExperience = (artistId) => {
+    return userExperiences.find(exp => exp.artist_id === artistId);
   };
 
   return (
@@ -143,13 +154,11 @@ export default function ArtistSearch() {
               </button>
             )}
           </div>
-          
-          {loading && <WaveLoader text="Searching artists..." />}
         </div>
       </div>
 
       {/* Empty state */}
-      {!loading && !artists.length && (
+      {!loading && !searchTerm && !artists.length && (
         <div className="mt-20 flex flex-col items-center justify-center text-center">
           <div className="w-64 h-64 mb-8 relative">
             {/* Subtle pulsing circles */}
@@ -179,80 +188,109 @@ export default function ArtistSearch() {
         </div>
       )}
 
+      {/* Loading state */}
+      {loading && searchTerm && (
+        <div className="mt-8 flex justify-center">
+          <div className="w-8 h-8 animate-spin rounded-full border-2 border-neon-pink border-t-transparent" />
+        </div>
+      )}
+
       {/* Results section */}
-      {artists.length > 0 && (
+      {!loading && searchTerm && artists.length > 0 && (
         <div className="mt-2 space-y-4">
-          {artists.map((artist) => (
-            <div 
-              key={artist.id}
-              className="group flex items-center p-6 rounded-xl
-                       bg-dark-card backdrop-blur-xl border border-gray-800/50
-                       hover:bg-dark-card/80 hover:border-neon-pink/50 
-                       transition-all duration-300 ease-out
-                       hover:shadow-lg hover:shadow-neon-pink/10"
-            >
-              <img 
-                src={artist.images[0]?.url || PLACEHOLDER_IMAGE}
-                onError={handleImageError}
-                alt={artist.name}
-                className="w-20 h-20 rounded-xl object-cover 
-                         group-hover:scale-105 transition-transform duration-300
-                         shadow-lg"
-              />
-              <div className="ml-6 flex-1">
-                <h3 className="font-bold text-xl text-white group-hover:text-neon-pink transition-colors">
-                  {artist.name}
-                </h3>
-                <p className="text-sm text-gray-400">
-                  {artist.followers.total.toLocaleString()} followers
-                </p>
-                {artist.genres && artist.genres.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {artist.genres.slice(0, 3).map((genre) => (
-                      <span 
-                        key={genre}
-                        className="px-2 py-1 text-xs rounded-full 
-                                 bg-neon-blue/10 text-neon-blue border border-neon-blue/20"
-                      >
-                        {genre}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {/* Add to Profile Button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addArtistToProfile(artist);
-                }}
-                className="relative ml-4 w-12 h-12 rounded-full flex items-center justify-center
-                          bg-neon-pink/10 border-2 border-neon-pink/30 
-                          hover:border-neon-pink group/btn
-                          focus:outline-none focus:ring-2 focus:ring-neon-pink/50"
-                aria-label="Add artist to profile"
+          {artists.map((artist) => {
+            const existingExperience = getExistingExperience(artist.id);
+            
+            return (
+              <div 
+                key={artist.id}
+                className="group flex items-center p-6 rounded-xl
+                         bg-dark-card backdrop-blur-xl border border-gray-800/50
+                         hover:bg-dark-card/80 hover:border-neon-pink/50 
+                         transition-all duration-300 ease-out
+                         hover:shadow-lg hover:shadow-neon-pink/10"
               >
-                {/* Ripple effect */}
-                <span className="absolute inset-0 rounded-full opacity-0 group-hover/btn:opacity-100
-                               before:absolute before:inset-0 before:rounded-full
-                               before:border-2 before:border-neon-pink/50
-                               before:animate-ping" />
-                {/* Plus icon */}
-                <span className="text-4xl leading-none text-neon-pink -mt-1">
-                  +
-                </span>
-              </button>
-            </div>
-          ))}
+                <img 
+                  src={artist.images[0]?.url || PLACEHOLDER_IMAGE}
+                  onError={handleImageError}
+                  alt={artist.name}
+                  className="w-20 h-20 rounded-xl object-cover 
+                           group-hover:scale-105 transition-transform duration-300
+                           shadow-lg"
+                />
+                <div className="ml-6 flex-1">
+                  <h3 className="font-bold text-xl text-white group-hover:text-neon-pink transition-colors">
+                    {artist.name}
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    {artist.followers.total.toLocaleString()} followers
+                  </p>
+                  {artist.genres && artist.genres.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {artist.genres.slice(0, 3).map((genre) => (
+                        <span 
+                          key={genre}
+                          className="px-2 py-1 text-xs rounded-full 
+                                   bg-neon-blue/10 text-neon-blue border border-neon-blue/20"
+                        >
+                          {genre}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* Add/Edit Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addArtistToProfile(artist, existingExperience);
+                  }}
+                  className={`relative ml-4 w-12 h-12 rounded-full flex items-center justify-center
+                            ${existingExperience 
+                              ? 'bg-neon-blue/10 border-2 border-neon-blue/30 hover:border-neon-blue' 
+                              : 'bg-neon-pink/10 border-2 border-neon-pink/30 hover:border-neon-pink'
+                            }
+                            group/btn focus:outline-none focus:ring-2 
+                            ${existingExperience ? 'focus:ring-neon-blue/50' : 'focus:ring-neon-pink/50'}`}
+                  aria-label={existingExperience ? "Edit experience" : "Add artist to profile"}
+                >
+                  {/* Ripple effect */}
+                  <span className={`absolute inset-0 rounded-full opacity-0 group-hover/btn:opacity-100
+                                 before:absolute before:inset-0 before:rounded-full
+                                 before:border-2 
+                                 ${existingExperience 
+                                   ? 'before:border-neon-blue/50' 
+                                   : 'before:border-neon-pink/50'}
+                                 before:animate-ping`} />
+                  {/* Icon */}
+                  {existingExperience ? (
+                    <svg className="w-6 h-6 text-neon-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  ) : (
+                    <span className="text-4xl leading-none text-neon-pink -mt-1">+</span>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* No results state */}
+      {!loading && searchTerm && artists.length === 0 && (
+        <div className="mt-8 text-center text-gray-400">
+          No artists found for "{searchTerm}"
         </div>
       )}
 
       {selectedArtist && (
         <AddExperienceModal
           artist={selectedArtist}
+          existingExperience={selectedArtist.existingExperience}
           onClose={() => setSelectedArtist(null)}
           onSuccess={() => {
-            // TODO: Show success message
             console.log('Experience added successfully!');
           }}
         />

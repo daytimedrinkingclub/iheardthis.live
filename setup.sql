@@ -23,6 +23,7 @@ create table public.artists (
     image_url text,
     spotify_url text not null,
     genres text[],
+    followers integer,
     created_at timestamp with time zone default timezone('utc'::text, now())
 );
 
@@ -32,16 +33,11 @@ create table public.user_artist_experiences (
     user_id uuid references public.profiles on delete cascade,
     artist_id text references public.artists on delete cascade,
     event_name text,
-    venue text,
     city text,
     country text,
-    event_date date not null,
     attended_with uuid[] default array[]::uuid[],
-    rating smallint check (rating >= 1 and rating <= 5),
-    notes text,
-    photos text[],
     created_at timestamp with time zone default timezone('utc'::text, now()),
-    unique(user_id, artist_id, event_date)
+    unique(user_id, artist_id)
 );
 
 -- Set up Row Level Security (RLS)

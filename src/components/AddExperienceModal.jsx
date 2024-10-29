@@ -3,21 +3,54 @@ import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import Spinner from './Spinner';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
-export default function AddExperienceModal({ artist, onClose, onSuccess }) {
-  const { profile } = useAuth();
+export default function AddExperienceModal({ artist, existingExperience, onClose, onSuccess }) {
+  const { user, profile, refreshExperiences } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    eventName: '',
-    city: '',
-    eventDate: new Date().toISOString().split('T')[0],
-    rating: 5,
-    notes: '',
+    eventName: existingExperience?.event_name || '',
+    city: existingExperience?.city || '',
     attendedWith: []
   });
   const [userSearch, setUserSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+
+  // Load attended_with users data
+  useEffect(() => {
+    const loadAttendedWithUsers = async () => {
+      if (existingExperience?.attended_with?.length) {
+        try {
+          const { data: users, error } = await supabase
+            .from('profiles')
+            .select('id, username, name, avatar_url')
+            .in('id', existingExperience.attended_with);
+
+          if (error) throw error;
+          
+          setFormData(prev => ({
+            ...prev,
+            attendedWith: users || []
+          }));
+        } catch (error) {
+          console.error('Error loading attended with users:', error);
+        }
+      }
+    };
+
+    loadAttendedWithUsers();
+  }, [existingExperience]);
+
+  // Check authentication
+  useEffect(() => {
+    if (!user) {
+      toast.error('Please login to add experiences');
+      onClose();
+      navigate('/');
+    }
+  }, [user, navigate, onClose]);
 
   // Search users when typing
   useEffect(() => {
@@ -33,6 +66,7 @@ export default function AddExperienceModal({ artist, onClose, onSuccess }) {
           .from('profiles')
           .select('id, username, name, avatar_url')
           .or(`username.ilike.%${userSearch}%,name.ilike.%${userSearch}%`)
+          .neq('id', user?.id) // Exclude current user
           .limit(5);
 
         if (error) throw error;
@@ -46,52 +80,52 @@ export default function AddExperienceModal({ artist, onClose, onSuccess }) {
 
     const timeoutId = setTimeout(searchUsers, 300);
     return () => clearTimeout(timeoutId);
-  }, [userSearch]);
-
-  const addAttendee = (user) => {
-    if (!formData.attendedWith.find(u => u.id === user.id)) {
-      setFormData({
-        ...formData,
-        attendedWith: [...formData.attendedWith, user]
-      });
-    }
-    setUserSearch('');
-  };
-
-  const removeAttendee = (userId) => {
-    setFormData({
-      ...formData,
-      attendedWith: formData.attendedWith.filter(u => u.id !== userId)
-    });
-  };
+  }, [userSearch, user?.id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!user) {
+      toast.error('Please login to add experiences');
+      return;
+    }
     setLoading(true);
 
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.user) return;
+      if (existingExperience) {
+        // Update existing experience
+        const { error } = await supabase
+          .from('user_artist_experiences')
+          .update({
+            event_name: formData.eventName || null,
+            city: formData.city || null,
+            attended_with: formData.attendedWith.map(u => u.id)
+          })
+          .eq('id', existingExperience.id);
 
-      const { error } = await supabase
-        .from('user_artist_experiences')
-        .insert({
-          user_id: session.user.id,
-          artist_id: artist.id,
-          event_name: formData.eventName,
-          city: formData.city,
-          event_date: formData.eventDate,
-          rating: formData.rating,
-          notes: formData.notes,
-          attended_with: formData.attendedWith.map(u => u.id)
-        });
+        if (error) throw error;
+        toast.success('Experience updated successfully!');
+      } else {
+        // Add new experience
+        const { error } = await supabase
+          .from('user_artist_experiences')
+          .insert({
+            user_id: user.id,
+            artist_id: artist.id,
+            event_name: formData.eventName || null,
+            city: formData.city || null,
+            attended_with: formData.attendedWith.map(u => u.id)
+          });
 
-      if (error) throw error;
-      toast.success('Experience added successfully!');
+        if (error) throw error;
+        toast.success('Experience added successfully!');
+      }
+
+      await refreshExperiences();
       onSuccess?.();
       onClose();
     } catch (error) {
-      toast.error(error.message);
+      console.error('Error saving experience:', error);
+      toast.error('Failed to save experience. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -128,11 +162,31 @@ export default function AddExperienceModal({ artist, onClose, onSuccess }) {
       .catch(() => toast.error('Failed to copy invite link'));
   };
 
+  const addAttendee = (searchedUser) => {
+    if (!formData.attendedWith.find(u => u.id === searchedUser.id)) {
+      setFormData({
+        ...formData,
+        attendedWith: [...formData.attendedWith, {
+          id: searchedUser.id,
+          username: searchedUser.username,
+          name: searchedUser.name,
+          avatar_url: searchedUser.avatar_url
+        }]
+      });
+    }
+    setUserSearch('');
+    setSearchResults([]); // Clear search results after adding
+  };
+
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-dark-card w-full max-w-md rounded-2xl border border-gray-800 p-6 m-4 max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-white">Add "{artist.name}" to your profile</h2>
+          <h2 className="text-xl font-bold text-white">
+            {existingExperience 
+              ? `Edit "${artist.name}" experience` 
+              : `Add "${artist.name}" to your profile`}
+          </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">×</button>
         </div>
 
@@ -143,7 +197,6 @@ export default function AddExperienceModal({ artist, onClose, onSuccess }) {
             </label>
             <input
               type="text"
-              required
               value={formData.eventName}
               onChange={(e) => setFormData({...formData, eventName: e.target.value})}
               placeholder="e.g., DGTL Bangalore 2024"
@@ -158,24 +211,9 @@ export default function AddExperienceModal({ artist, onClose, onSuccess }) {
             </label>
             <input
               type="text"
-              required
               value={formData.city}
               onChange={(e) => setFormData({...formData, city: e.target.value})}
               placeholder="e.g., Bangalore"
-              className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
-                       text-white focus:outline-none focus:border-neon-pink"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              When did you see them?
-            </label>
-            <input
-              type="date"
-              required
-              value={formData.eventDate}
-              onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
               className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
                        text-white focus:outline-none focus:border-neon-pink"
             />
@@ -245,34 +283,52 @@ export default function AddExperienceModal({ artist, onClose, onSuccess }) {
                 )}
 
                 {/* Search results dropdown */}
-                {searchResults.length > 0 && (
+                {userSearch && (
                   <div className="absolute left-0 right-0 mt-1 bg-dark border border-gray-700 rounded-lg 
                                 shadow-lg max-h-48 overflow-y-auto z-10">
-                    {searchResults.map(user => (
-                      <button
-                        key={user.id}
-                        type="button"
-                        onClick={() => addAttendee(user)}
-                        className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-800"
-                      >
-                        <img
-                          src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.username}&background=random`}
-                          alt={user.username}
-                          className="w-8 h-8 rounded-full"
-                        />
-                        <div className="text-left">
-                          <p className="text-gray-300">@{user.username}</p>
-                          <p className="text-sm text-gray-500">{user.name}</p>
+                    {!searching ? (
+                      searchResults.length > 0 ? (
+                        searchResults.map(searchedUser => (
+                          <button
+                            key={searchedUser.id}
+                            type="button"
+                            onClick={() => addAttendee(searchedUser)}
+                            className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-800"
+                          >
+                            <img
+                              src={searchedUser.avatar_url || `https://ui-avatars.com/api/?name=${searchedUser.username}&background=random`}
+                              alt={searchedUser.username}
+                              className="w-8 h-8 rounded-full"
+                            />
+                            <div className="text-left">
+                              <p className="text-gray-300">@{searchedUser.username}</p>
+                              <p className="text-sm text-gray-500">{searchedUser.name}</p>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-4 flex items-center justify-between">
+                          <p className="text-gray-400 text-sm">No "{userSearch}" found :(</p>
+                          <button
+                            type="button"
+                            onClick={handleInvite}
+                            className="flex items-center gap-2 px-3 py-1 text-sm text-neon-pink 
+                                     hover:bg-neon-pink/10 rounded-lg transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>Invite them?</span>
+                          </button>
                         </div>
-                      </button>
-                    ))}
+                      )
+                    ) : null}
                   </div>
                 )}
               </div>
             </div>
           </div>
-
-          {/* Rating and Notes fields remain the same */}
 
           <div className="flex justify-end gap-3 mt-6">
             <button
@@ -294,10 +350,10 @@ export default function AddExperienceModal({ artist, onClose, onSuccess }) {
               {loading ? (
                 <>
                   <Spinner className="w-5 h-5" />
-                  <span>Adding...</span>
+                  <span>{existingExperience ? 'Saving...' : 'Adding...'}</span>
                 </>
               ) : (
-                'Add to Profile'
+                existingExperience ? 'Save Changes' : 'Add to Profile'
               )}
             </button>
           </div>
