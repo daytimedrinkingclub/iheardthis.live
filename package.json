@@ -21,7 +21,8 @@
     "react-select": "^5.8.2",
     "react-select-country-list": "^2.2.3",
     "sonner": "^1.4.0",
-    "spotify-web-api-node": "^5.0.2"
+    "spotify-web-api-node": "^5.0.2",
+    "uuid": "^11.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",

@@ -117,4 +117,23 @@ DROP TRIGGER IF EXISTS set_updated_at ON public.profiles;
 CREATE TRIGGER set_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW
-  EXECUTE FUNCTION public.handle_updated_at(); 
+  EXECUTE FUNCTION public.handle_updated_at();
+
+-- Storage setup and policies
+-- Create storage bucket for profile images
+insert into storage.buckets (id, name, public)
+values ('images', 'images', true)
+on conflict (id) do nothing;
+
+-- Enable RLS on storage.objects
+alter table storage.objects enable row level security;
+
+-- Simple policies for image storage
+create policy "Give public access to images"
+on storage.objects for select
+using (bucket_id = 'images');
+
+create policy "Allow authenticated uploads"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'images');

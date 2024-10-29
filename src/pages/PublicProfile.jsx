@@ -82,7 +82,7 @@ export default function PublicProfile() {
                 `https://ui-avatars.com/api/?name=${profile.name}`
               }
               alt={profile.name}
-              className="w-24 h-24 rounded-full border-2 border-neon-pink shadow-lg shadow-neon-pink/20"
+              className="w-24 h-24 rounded-full object-cover"
             />
 
             {/* Profile Info */}

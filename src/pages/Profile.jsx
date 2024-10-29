@@ -5,6 +5,7 @@ import WaveLoader from '../components/WaveLoader';
 import Spinner from '../components/Spinner';
 import Select from 'react-select';
 import countryList from 'react-select-country-list';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function Profile() {
   const [initialLoading, setInitialLoading] = useState(true);
@@ -20,7 +21,8 @@ export default function Profile() {
     youtube_url: ''
   });
   const [usernameError, setUsernameError] = useState('');
-  
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
   // Get countries list
   const countries = useMemo(() => {
     return countryList().getData().map(country => ({
@@ -144,6 +146,61 @@ export default function Profile() {
     }
   };
 
+  const handleAvatarUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+
+    try {
+      // Generate unique file name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${uuidv4()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload file to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(filePath);
+
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+      toast.success('Profile picture updated successfully');
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast.error('Failed to update profile picture');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   if (initialLoading) {
     return <WaveLoader text="Loading profile" />;
   }
@@ -153,6 +210,47 @@ export default function Profile() {
       <h1 className="text-2xl font-bold mb-8">Profile Settings</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Avatar Upload Section */}
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative group">
+            <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-gray-700 
+                          group-hover:border-neon-pink transition-colors duration-200">
+              <img
+                src={profile.avatar_url || `https://ui-avatars.com/api/?name=${profile.name}`}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+              {uploadingAvatar && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">
+                  <Spinner className="w-8 h-8" />
+                </div>
+              )}
+            </div>
+            
+            <label className="absolute inset-0 flex items-center justify-center 
+                            bg-black/50 opacity-0 group-hover:opacity-100 
+                            cursor-pointer transition-opacity duration-200
+                            text-white text-sm rounded-full">
+              <div className="flex flex-col items-center">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                disabled={uploadingAvatar}
+                className="hidden"
+              />
+            </label>
+          </div>
+          <p className="text-xs text-gray-400">
+            Click to upload a new profile picture
+          </p>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1">
             Username *

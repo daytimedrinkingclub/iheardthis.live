@@ -53,10 +53,21 @@ A platform for music enthusiasts to track and share their live music experiences
    
    b. Enable Email Auth in Authentication settings
    
-   c. Run the SQL setup script:
+   c. Create Storage bucket:
+      - Go to Storage in your Supabase dashboard
+      - Create a new bucket named "images"
+      - Make the bucket public
+   
+   d. Run the SQL setup script:
       - Go to SQL Editor in your Supabase dashboard
       - Copy contents from `setup.sql`
       - Run the script
+
+   The setup includes:
+   - Database tables and relationships
+   - Row Level Security (RLS) policies
+   - Storage bucket for profile images
+   - Automated triggers and functions
 
 5. **Start Development Server**
    ```bash
@@ -91,3 +102,14 @@ A platform for music enthusiasts to track and share their live music experiences
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Storage Structure
+
+### Images Bucket
+- Purpose: Stores user profile pictures and other images
+- Access: Public read, authenticated write
+- Location: `storage.objects` with bucket_id 'images'
+- Policies:
+  - Public can view all images
+  - Authenticated users can upload images
+  - Files are served via Supabase CDN
