@@ -213,7 +213,9 @@ export default function PublicProfile() {
               transition={{ delay: index * 0.1 }}
               className="relative aspect-square group rounded-xl overflow-hidden 
                         border border-gray-800/50 hover:border-neon-pink/50
-                        transition-all duration-500 hover:shadow-lg hover:shadow-neon-pink/20"
+                        transition-all duration-500 hover:shadow-lg hover:shadow-neon-pink/20
+                        cursor-pointer"
+              onClick={() => window.open(experience.artist.spotify_url, '_blank')}
             >
               {/* Background Image with Gradient */}
               <div className="absolute inset-0">
@@ -225,82 +227,80 @@ export default function PublicProfile() {
                 />
                 <div
                   className="absolute inset-0 bg-gradient-to-t 
-                              from-black/90 via-black/60 to-transparent
+                              from-black via-black/50 to-transparent
                               opacity-60 group-hover:opacity-90
                               transition-opacity duration-500"
                 />
               </div>
 
               {/* Content Overlay */}
-              <div
-                className="absolute inset-0 p-6 flex flex-col justify-end transform
-                            transition-all duration-500"
-              >
-                {/* Artist Info - Slides up on hover */}
-                <div
-                  className="transform translate-y-8 group-hover:translate-y-0 
-                              transition-transform duration-500"
-                >
-                  <h3
-                    className="font-bold text-xl text-white mb-2 
-                               group-hover:text-neon-pink transition-colors"
-                  >
-                    {experience.artist.name}
-                  </h3>
+              <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                {/* Artist Info Container - Moves up on hover */}
+                <div className="transform translate-y-0 group-hover:-translate-y-4 
+                              transition-all duration-500 ease-out">
+                  {/* Artist Name - Always visible */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-bold text-xl text-white 
+                                 group-hover:text-neon-pink transition-colors">
+                      {experience.artist.name}
+                    </h3>
+                    <svg 
+                      className="w-4 h-4 text-gray-400 group-hover:text-neon-pink 
+                               opacity-0 group-hover:opacity-100 transition-all duration-500 
+                               transform translate-x-2 group-hover:translate-x-0" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </div>
 
-                  <div
-                    className="space-y-2 opacity-0 group-hover:opacity-100 
-                                transition-opacity duration-500 delay-100"
-                  >
-                    <p className="text-sm text-gray-300 flex items-center gap-2">
-                      <svg
-                        className="w-4 h-4"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      {experience.artist.followers?.toLocaleString()} followers
-                    </p>
-
-                    {experience.event_name && (
-                      <p className="text-neon-pink flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M18 10.5V8.75C18 8.06 17.44 7.5 16.75 7.5H16.5V6.25C16.5 5.56 15.94 5 15.25 5H4.75C4.06 5 3.5 5.56 3.5 6.25V10.5L2.25 12V13H3.5V17.75C3.5 18.44 4.06 19 4.75 19H15.25C15.94 19 16.5 18.44 16.5 17.75V13H17.75V12L16.5 10.5H18ZM15 17.5H5V6.5H15V17.5ZM7.5 8.5H12.5V10H7.5V8.5ZM7.5 11.5H12.5V13H7.5V11.5ZM7.5 14.5H12.5V16H7.5V14.5Z" />
+                  {/* Additional Info - Hidden initially, shows on hover */}
+                  <div className="h-0 group-hover:h-auto overflow-hidden opacity-0 
+                                group-hover:opacity-100 transition-all duration-500
+                                transform translate-y-4 group-hover:translate-y-0
+                                ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-300 flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
-                        {experience.event_name}
+                        {experience.artist.followers?.toLocaleString()} followers
                       </p>
-                    )}
 
-                    {experience.city && (
-                      <p className="text-gray-400 text-sm flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        {experience.city}
-                      </p>
-                    )}
+                      {experience.event_name && (
+                        <p className="text-neon-pink flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18 10.5V8.75C18 8.06 17.44 7.5 16.75 7.5H16.5V6.25C16.5 5.56 15.94 5 15.25 5H4.75C4.06 5 3.5 5.56 3.5 6.25V10.5L2.25 12V13H3.5V17.75C3.5 18.44 4.06 19 4.75 19H15.25C15.94 19 16.5 18.44 16.5 17.75V13H17.75V12L16.5 10.5H18ZM15 17.5H5V6.5H15V17.5ZM7.5 8.5H12.5V10H7.5V8.5ZM7.5 11.5H12.5V13H7.5V11.5ZM7.5 14.5H12.5V16H7.5V14.5Z" />
+                          </svg>
+                          {experience.event_name}
+                        </p>
+                      )}
 
-                    {/* Genres */}
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {experience.artist.genres?.slice(0, 2).map((genre) => (
-                        <span
-                          key={genre}
-                          className="inline-block px-2 py-1 text-xs rounded-full 
-                                   bg-neon-blue/10 text-neon-blue border border-neon-blue/20
-                                   backdrop-blur-sm"
-                        >
-                          {genre}
-                        </span>
-                      ))}
+                      {experience.city && (
+                        <p className="text-gray-400 text-sm flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                          </svg>
+                          {experience.city}
+                        </p>
+                      )}
+
+                      {/* Genres */}
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {experience.artist.genres?.slice(0, 2).map((genre) => (
+                          <span
+                            key={genre}
+                            className="inline-block px-2 py-1 text-xs rounded-full 
+                                     bg-neon-blue/10 text-neon-blue border border-neon-blue/20
+                                     backdrop-blur-sm"
+                          >
+                            {genre}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
