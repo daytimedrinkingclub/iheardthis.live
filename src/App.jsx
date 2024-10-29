@@ -7,6 +7,7 @@ import ArtistSearch from './components/ArtistSearch';
 import AuthModal from './components/AuthModal';
 import { useState } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
+import PublicProfile from './pages/PublicProfile';
 
 function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -26,6 +27,7 @@ function App() {
                 </div>
               } />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/:username" element={<PublicProfile />} />
             </Routes>
           </main>
           <Footer />

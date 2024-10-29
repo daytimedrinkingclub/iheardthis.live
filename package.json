@@ -14,6 +14,7 @@
     "@supabase/supabase-js": "^2.46.0",
     "appwrite": "^16.0.2",
     "axios": "^1.6.7",
+    "framer-motion": "^11.11.10",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.22.0",
