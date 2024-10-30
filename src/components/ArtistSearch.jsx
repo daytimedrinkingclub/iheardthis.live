@@ -150,7 +150,7 @@ export default function ArtistSearch({ onAuthRequired }) {
         .from("profiles")
         .select("id, avatar_url, username")
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(30);
 
       if (!error && data && data.length > 0) {
         setRecentUsers(data);
