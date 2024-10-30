@@ -147,13 +147,20 @@ export default function ArtistSearch({ onAuthRequired }) {
   useEffect(() => {
     const fetchRecentUsers = async () => {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, avatar_url, username")
-        .order("created_at", { ascending: false })
+        .from('profiles')
+        .select(`
+          id, 
+          avatar_url, 
+          username,
+          user_artist_experiences!inner(id)
+        `)
+        .order('created_at', { ascending: false })
         .limit(30);
 
       if (!error && data && data.length > 0) {
-        setRecentUsers(data);
+        // Clean up the data to match the existing structure
+        const cleanedData = data.map(({ user_artist_experiences, ...user }) => user);
+        setRecentUsers(cleanedData);
       }
     };
 
@@ -284,7 +291,7 @@ export default function ArtistSearch({ onAuthRequired }) {
                         <img
                           src={
                             user.avatar_url ||
-                            `https://ui-avatars.com/api/?name=${user.username}`
+                            `https://ui-avatars.com/api/?name=${user.username}&background=random`
                           }
                           alt={user.username}
                           className="w-full h-full object-cover"

@@ -57,7 +57,7 @@ export default function AddExperienceModal({
     }
   }, [user, navigate, onClose]);
 
-  // Search users when typing
+  // Modify the search users effect
   useEffect(() => {
     const searchUsers = async () => {
       if (!userSearch.trim()) {
@@ -65,12 +65,17 @@ export default function AddExperienceModal({
         return;
       }
 
+      // Remove @ from the beginning of the search query
+      const cleanedSearch = userSearch.startsWith("@")
+        ? userSearch.slice(1)
+        : userSearch;
+
       setSearching(true);
       try {
         const { data, error } = await supabase
           .from("profiles")
           .select("id, username, name, avatar_url")
-          .or(`username.ilike.%${userSearch}%,name.ilike.%${userSearch}%`)
+          .or(`username.ilike.%${cleanedSearch}%,name.ilike.%${cleanedSearch}%`)
           .neq("id", user?.id) // Exclude current user
           .limit(5);
 
@@ -78,6 +83,7 @@ export default function AddExperienceModal({
         setSearchResults(data || []);
       } catch (error) {
         console.error("Error searching users:", error);
+        setSearchResults([]);
       } finally {
         setSearching(false);
       }
@@ -147,9 +153,7 @@ export default function AddExperienceModal({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Join me on IHeardThis.live",
           text: inviteMessage,
-          url: `https://iheardthis.live/${profile.username}`,
         });
       } catch (error) {
         if (error.name !== "AbortError") {
@@ -187,8 +191,15 @@ export default function AddExperienceModal({
     setSearchResults([]); // Clear search results after adding
   };
 
+  const removeAttendee = (userId) => {
+    setFormData({
+      ...formData,
+      attendedWith: formData.attendedWith.filter((user) => user.id !== userId),
+    });
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 max-h-screen overflow-hidden">
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 max-h-screen">
       <div className="bg-dark-card w-full max-w-md rounded-2xl border border-gray-800 p-6 m-4 max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white">
@@ -318,64 +329,43 @@ export default function AddExperienceModal({
                 {userSearch && (
                   <div
                     className="absolute left-0 right-0 mt-1 bg-dark border border-gray-700 rounded-lg 
-                                shadow-lg max-h-48 overflow-y-auto z-10"
+                                  shadow-lg max-h-48 overflow-y-auto"
                   >
-                    {!searching ? (
-                      searchResults.length > 0 ? (
-                        searchResults.map((searchedUser) => (
-                          <button
-                            key={searchedUser.id}
-                            type="button"
-                            onClick={() => addAttendee(searchedUser)}
-                            className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-800"
-                          >
-                            <img
-                              src={
-                                searchedUser.avatar_url ||
-                                `https://ui-avatars.com/api/?name=${searchedUser.username}&background=random`
-                              }
-                              alt={searchedUser.username}
-                              className="w-8 h-8 rounded-full"
-                            />
-                            <div className="text-left">
-                              <p className="text-gray-300">
-                                @{searchedUser.username}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {searchedUser.name}
-                              </p>
-                            </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="p-4 flex items-center justify-between">
-                          <p className="text-gray-400 text-sm">
-                            No "{userSearch}" found :(
+                    {searchResults.length > 0 ? (
+                      searchResults.map((searchedUser) => (
+                        <button
+                          key={searchedUser.id}
+                          type="button"
+                          onClick={() => addAttendee(searchedUser)}
+                          className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-800"
+                        >
+                          <img
+                            src={
+                              searchedUser.avatar_url ||
+                              `https://ui-avatars.com/api/?name=${searchedUser.username}&background=random`
+                            }
+                            alt={searchedUser.username}
+                            className="w-8 h-8 rounded-full"
+                          />
+                          <div className="text-left">
+                            <p className="text-gray-300">
+                              @{searchedUser.username}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {searchedUser.name}
+                            </p>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <>
+                        {userSearch.length > 3 ? (
+                          <p className="p-4 text-center text-gray-400">
+                            No users found matching "{userSearch}"
                           </p>
-                          <button
-                            type="button"
-                            onClick={handleInvite}
-                            className="flex items-center gap-2 px-3 py-1 text-sm text-neon-pink 
-                                     hover:bg-neon-pink/10 rounded-lg transition-colors"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 4v16m8-8H4"
-                              />
-                            </svg>
-                            <span>Invite them?</span>
-                          </button>
-                        </div>
-                      )
-                    ) : null}
+                        ) : null}
+                      </>
+                    )}
                   </div>
                 )}
               </div>
