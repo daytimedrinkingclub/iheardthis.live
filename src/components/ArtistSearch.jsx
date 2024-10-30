@@ -147,19 +147,23 @@ export default function ArtistSearch({ onAuthRequired }) {
   useEffect(() => {
     const fetchRecentUsers = async () => {
       const { data, error } = await supabase
-        .from('profiles')
-        .select(`
+        .from("profiles")
+        .select(
+          `
           id, 
           avatar_url, 
           username,
           user_artist_experiences!inner(id)
-        `)
-        .order('created_at', { ascending: false })
+        `
+        )
+        .order("created_at", { ascending: false })
         .limit(30);
 
       if (!error && data && data.length > 0) {
         // Clean up the data to match the existing structure
-        const cleanedData = data.map(({ user_artist_experiences, ...user }) => user);
+        const cleanedData = data.map(
+          ({ user_artist_experiences, ...user }) => user
+        );
         setRecentUsers(cleanedData);
       }
     };
@@ -289,22 +293,12 @@ export default function ArtistSearch({ onAuthRequired }) {
                         }}
                       >
                         <img
-                          src={
-                            user.avatar_url ||
-                            `https://ui-avatars.com/api/?name=${user.username}&background=random`
-                          }
+                          src={`https://desilog.sivaramp.com/static/avatars/${
+                            index + 1
+                          }.jpg`}
                           alt={user.username}
                           className="w-full h-full object-cover"
                         />
-                        {/* Username tooltip */}
-                        <div
-                          className="absolute -bottom-8 left-1/2 -translate-x-1/2 
-                                      opacity-0 group-hover:opacity-100 transition-opacity
-                                      whitespace-nowrap bg-dark-card/90 px-2 py-1 rounded-full
-                                      text-xs text-white border border-gray-700"
-                        >
-                          @{user.username}
-                        </div>
                       </motion.div>
                     );
                   })}
