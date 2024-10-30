@@ -151,7 +151,7 @@ export default function ArtistSearch({ onAuthRequired }) {
         .select("id, avatar_url, username")
         .order("created_at", { ascending: false })
         .limit(10);
-        
+
       if (!error && data && data.length > 0) {
         setRecentUsers(data);
       }
@@ -163,15 +163,15 @@ export default function ArtistSearch({ onAuthRequired }) {
   useEffect(() => {
     if (selectedArtist) {
       // Disable scroll
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
       // Re-enable scroll
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
 
     // Cleanup function to re-enable scroll when component unmounts
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
   }, [selectedArtist]);
 
@@ -188,7 +188,7 @@ export default function ArtistSearch({ onAuthRequired }) {
             </div>
 
             {/* Sticky search container */}
-            <div className="sticky top-0 py-4 mt-20 z-10">
+            <div className="sticky top-0 py-4 mt-20 z-50">
               <div className="bg-dark/80 backdrop-blur-md px-4 py-4 rounded-2xl border border-gray-800/50">
                 <div className="relative">
                   <input
@@ -199,7 +199,7 @@ export default function ArtistSearch({ onAuthRequired }) {
                     spellCheck="false"
                     className="w-full px-6 py-3 text-white bg-dark-card/50 border border-gray-700 rounded-xl 
                        focus:outline-none focus:border-neon-pink focus:ring-2 focus:ring-neon-pink/50
-                       shadow-lg pr-12"
+                       shadow-lg pr-12 z-50"
                   />
                   {searchTerm && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -228,12 +228,12 @@ export default function ArtistSearch({ onAuthRequired }) {
             {!loading && !searchTerm && !artists.length && (
               <div className="relative min-h-[400px]">
                 {/* Floating avatars container - now fixed to viewport */}
-                <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="fixed z-10 inset-0 overflow-hidden pointer-events-none">
                   {recentUsers.map((user, index) => {
                     // Calculate random starting positions
                     const startX = Math.random() * window.innerWidth;
                     const startY = Math.random() * window.innerHeight;
-                    
+
                     // Calculate random target positions
                     const targetX = Math.random() * window.innerWidth;
                     const targetY = Math.random() * window.innerHeight;
@@ -241,17 +241,17 @@ export default function ArtistSearch({ onAuthRequired }) {
                     return (
                       <motion.div
                         key={user.id}
-                        initial={{ 
-                          opacity: 0, 
+                        initial={{
+                          opacity: 0,
                           scale: 0.5,
-                          x: startX,  // Random starting X
-                          y: startY   // Random starting Y
+                          x: startX, // Random starting X
+                          y: startY, // Random starting Y
                         }}
-                        animate={{ 
-                          opacity: 1, 
+                        animate={{
+                          opacity: 1,
                           scale: 1,
-                          x: targetX,  // Random target X
-                          y: targetY   // Random target Y
+                          x: targetX, // Random target X
+                          y: targetY, // Random target Y
                         }}
                         transition={{
                           type: "spring",
@@ -266,31 +266,36 @@ export default function ArtistSearch({ onAuthRequired }) {
                             duration: 3 + Math.random() * 2,
                             repeat: Infinity,
                             repeatType: "reverse",
-                            ease: "easeInOut"
-                          }
+                            ease: "easeInOut",
+                          },
                         }}
                         className="fixed w-12 h-12 rounded-full overflow-hidden 
                                  border-2 border-neon-pink/30 cursor-pointer
                                  hover:scale-110 hover:border-neon-pink
                                  transition-all duration-300 pointer-events-auto
-                                 hover:z-50 group"
+                                 group"
                         style={{
-                          zIndex: 40
+                          zIndex: 500,
                         }}
                         onClick={() => {
                           window.open(`/${user.username}`, "_blank");
                         }}
                       >
                         <img
-                          src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.username}`}
+                          src={
+                            user.avatar_url ||
+                            `https://ui-avatars.com/api/?name=${user.username}`
+                          }
                           alt={user.username}
                           className="w-full h-full object-cover"
                         />
                         {/* Username tooltip */}
-                        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 
+                        <div
+                          className="absolute -bottom-8 left-1/2 -translate-x-1/2 
                                       opacity-0 group-hover:opacity-100 transition-opacity
                                       whitespace-nowrap bg-dark-card/90 px-2 py-1 rounded-full
-                                      text-xs text-white border border-gray-700 z-50">
+                                      text-xs text-white border border-gray-700"
+                        >
                           @{user.username}
                         </div>
                       </motion.div>
@@ -299,13 +304,13 @@ export default function ArtistSearch({ onAuthRequired }) {
                 </div>
 
                 {/* Empty state content - now with higher z-index */}
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5, duration: 0.5 }}
                   className="mt-4 p-20 bg-black/80 rounded-2xl 
                             flex flex-col items-center justify-center text-center 
-                            relative z-[45]"
+                            relative"
                 >
                   <div className="w-64 h-64 mb-8 relative">
                     <div className="absolute inset-0 flex items-center justify-center">
