@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import Spinner from './Spinner';
@@ -43,6 +43,59 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     email: '',
     password: ''
   });
+
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'login') return;
+    
+    // Small timeout to ensure the DOM element exists
+    const timeoutId = setTimeout(() => {
+      if (window.google && document.getElementById("googleButton")) {
+        google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          callback: handleGoogleSignIn,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+
+        google.accounts.id.renderButton(
+          document.getElementById("googleButton"),
+          { 
+            theme: "outline", 
+            size: "large",
+            width: "100%",
+            type: "standard", // This ensures it shows both icon and text
+            shape: "rectangular",
+            text: "signin_with",
+            locale: "en"
+          }
+        );
+
+        google.accounts.id.prompt();
+      }
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [isOpen, activeTab]); // Add activeTab to dependencies
+
+  const handleGoogleSignIn = async (response) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: response.credential,
+      });
+
+      if (error) throw error;
+
+      toast.success('Welcome!');
+      resetForms();
+      onSuccess(data.user);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Username validation with debounce
   const checkUsername = async (username) => {
@@ -188,6 +241,26 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
 
   if (!isOpen) return null;
 
+  const socialLoginButtons = (mode) => (
+    <div className="space-y-4 mb-6">
+      {mode === 'login' && (
+        <div id="googleButton" className="flex justify-center w-full !min-w-full">
+          {/* The '!min-w-full' class ensures the button takes full width */}
+        </div>
+      )}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-700"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-dark-card text-gray-400">
+            {mode === 'login' ? 'or login with email' : 'sign up with email'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[100]">
       <div className="bg-dark-card w-full max-w-md rounded-2xl border border-gray-800 p-8 mx-4 
@@ -216,158 +289,164 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
 
         {/* Signup Form */}
         {activeTab === 'signup' && (
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Name
-              </label>
-              <input
-                type="text"
-                required
-                value={signupForm.name}
-                onChange={(e) => setSignupForm({...signupForm, name: e.target.value})}
-                className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
-                         text-white focus:outline-none focus:border-neon-pink"
-                placeholder="Your name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Username
-              </label>
-              <div className="relative">
+          <>
+            {socialLoginButtons('signup')}
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Name
+                </label>
                 <input
                   type="text"
                   required
-                  value={signupForm.username}
-                  onChange={handleUsernameChange}
-                  onBlur={handleUsernameBlur}
-                  className={`w-full px-4 py-3 bg-dark border 
-                           ${shakeUsername ? 'border-red-500 shake' : 'border-gray-700'} 
-                           rounded-lg text-white focus:outline-none focus:border-neon-pink
-                           transition-colors duration-200`}
-                  placeholder="Choose a username"
+                  value={signupForm.name}
+                  onChange={(e) => setSignupForm({...signupForm, name: e.target.value})}
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
+                           text-white focus:outline-none focus:border-neon-pink"
+                  placeholder="Your name"
                 />
-                {checkingUsername && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Spinner className="w-5 h-5" />
-                  </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Username
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={signupForm.username}
+                    onChange={handleUsernameChange}
+                    onBlur={handleUsernameBlur}
+                    className={`w-full px-4 py-3 bg-dark border 
+                             ${shakeUsername ? 'border-red-500 shake' : 'border-gray-700'} 
+                             rounded-lg text-white focus:outline-none focus:border-neon-pink
+                             transition-colors duration-200`}
+                    placeholder="Choose a username"
+                  />
+                  {checkingUsername && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Spinner className="w-5 h-5" />
+                    </div>
+                  )}
+                </div>
+                {shakeUsername && (
+                  <p className="mt-1 text-sm text-red-500">
+                    This username is already taken
+                  </p>
                 )}
               </div>
-              {shakeUsername && (
-                <p className="mt-1 text-sm text-red-500">
-                  This username is already taken
-                </p>
-              )}
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                required
-                value={signupForm.email}
-                onChange={(e) => setSignupForm({...signupForm, email: e.target.value})}
-                className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
-                         text-white focus:outline-none focus:border-neon-pink"
-                placeholder="your@email.com"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={signupForm.email}
+                  onChange={(e) => setSignupForm({...signupForm, email: e.target.value})}
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
+                           text-white focus:outline-none focus:border-neon-pink"
+                  placeholder="your@email.com"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={signupForm.password}
-                onChange={(e) => setSignupForm({...signupForm, password: e.target.value})}
-                className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
-                         text-white focus:outline-none focus:border-neon-pink"
-                placeholder="Choose a password"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={signupForm.password}
+                  onChange={(e) => setSignupForm({...signupForm, password: e.target.value})}
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
+                           text-white focus:outline-none focus:border-neon-pink"
+                  placeholder="Choose a password"
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={loading || checkingUsername}
-              className="w-full px-4 py-3 mt-6 bg-neon-pink/20 border border-neon-pink 
-                       text-neon-pink rounded-lg hover:bg-neon-pink/30 
-                       focus:outline-none focus:ring-2 focus:ring-neon-pink/50
-                       disabled:opacity-50 disabled:cursor-not-allowed
-                       font-medium transition-all duration-200
-                       flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Spinner className="w-5 h-5" />
-                  <span>Creating account...</span>
-                </>
-              ) : (
-                'Create Account'
-              )}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading || checkingUsername}
+                className="w-full px-4 py-3 mt-6 bg-neon-pink/20 border border-neon-pink 
+                         text-neon-pink rounded-lg hover:bg-neon-pink/30 
+                         focus:outline-none focus:ring-2 focus:ring-neon-pink/50
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         font-medium transition-all duration-200
+                         flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Spinner className="w-5 h-5" />
+                    <span>Creating account...</span>
+                  </>
+                ) : (
+                  'Create Account'
+                )}
+              </button>
+            </form>
+          </>
         )}
 
         {/* Login Form */}
         {activeTab === 'login' && (
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                required
-                value={loginForm.email}
-                onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
-                className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
-                         text-white focus:outline-none focus:border-neon-pink"
-                placeholder="your@email.com"
-              />
-            </div>
+          <>
+            {socialLoginButtons('login')}
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={loginForm.email}
+                  onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
+                           text-white focus:outline-none focus:border-neon-pink"
+                  placeholder="your@email.com"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                value={loginForm.password}
-                onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-                className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
-                         text-white focus:outline-none focus:border-neon-pink"
-                placeholder="Your password"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
+                           text-white focus:outline-none focus:border-neon-pink"
+                  placeholder="Your password"
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full px-4 py-3 mt-6 bg-neon-pink/20 border border-neon-pink 
-                       text-neon-pink rounded-lg hover:bg-neon-pink/30 
-                       focus:outline-none focus:ring-2 focus:ring-neon-pink/50
-                       disabled:opacity-50 disabled:cursor-not-allowed
-                       font-medium transition-all duration-200
-                       flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Spinner className="w-5 h-5" />
-                  <span>Logging in...</span>
-                </>
-              ) : (
-                'Login'
-              )}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full px-4 py-3 mt-6 bg-neon-pink/20 border border-neon-pink 
+                         text-neon-pink rounded-lg hover:bg-neon-pink/30 
+                         focus:outline-none focus:ring-2 focus:ring-neon-pink/50
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         font-medium transition-all duration-200
+                         flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Spinner className="w-5 h-5" />
+                    <span>Logging in...</span>
+                  </>
+                ) : (
+                  'Login'
+                )}
+              </button>
+            </form>
+          </>
         )}
 
         {/* Close button */}
