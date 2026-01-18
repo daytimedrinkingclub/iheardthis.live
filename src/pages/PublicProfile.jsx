@@ -48,15 +48,12 @@ export default function PublicProfile() {
           artist:artists(*)
         `
         )
-        .eq("user_id", profileData.id);
+        .eq("user_id", profileData.id)
+        .order("created_at", { ascending: false });
 
       if (experiencesError) throw experiencesError;
 
-      // Sort experiences by artist followers
-      const sortedExperiences = experiencesData.sort(
-        (a, b) => (b.artist.followers || 0) - (a.artist.followers || 0)
-      );
-      setExperiences(sortedExperiences);
+      setExperiences(experiencesData);
     } catch (error) {
       console.error("Error loading profile:", error);
     } finally {
