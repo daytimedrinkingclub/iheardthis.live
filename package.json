@@ -12,7 +12,6 @@
   "dependencies": {
     "@headlessui/react": "^1.7.18",
     "@supabase/supabase-js": "^2.46.0",
-    "appwrite": "^16.0.2",
     "axios": "^1.6.7",
     "framer-motion": "^11.11.10",
     "react": "^18.3.1",
@@ -21,7 +20,6 @@
     "react-select": "^5.8.2",
     "react-select-country-list": "^2.2.3",
     "sonner": "^1.4.0",
-    "spotify-web-api-node": "^5.0.2",
     "uuid": "^11.0.2"
   },
   "devDependencies": {
