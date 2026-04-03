@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { supabase } from "../lib/supabase";
 import AddExperienceModal from "./AddExperienceModal";
-import WaveLoader from "./WaveLoader";
 import { useAuth } from "../contexts/AuthContext";
 import Spinner from "./Spinner";
 import { motion } from "framer-motion";
@@ -104,7 +103,7 @@ export default function ArtistSearch({ onAuthRequired }) {
 
     try {
       // First ensure artist exists in our DB
-      const { data: existingArtist, error: artistError } = await supabase
+      const { data: existingArtist } = await supabase
         .from("artists")
         .select()
         .eq("id", artist.id)
@@ -472,8 +471,8 @@ export default function ArtistSearch({ onAuthRequired }) {
                     />
                   </svg>
                   <p className="text-gray-400">
-                    No artists found for "
-                    <span className="text-neon-pink">{searchTerm}</span>"
+                    No artists found for &quot;
+                    <span className="text-neon-pink">{searchTerm}</span>&quot;
                   </p>
                 </div>
               </div>
