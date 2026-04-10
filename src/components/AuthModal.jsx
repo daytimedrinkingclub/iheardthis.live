@@ -4,463 +4,127 @@ import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import Spinner from './Spinner';
 
-const usernameValidation = async (username, supabase) => {
-  if (!username) return false;
-  
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('username', username)
-      .single();
-    
-    if (error && error.code !== 'PGRST116') {
-      throw error;
-    }
-    
-    return !!data; // Returns true if username exists
-  } catch (error) {
-    console.error('Error checking username:', error);
-    return false;
-  }
-};
+async function generateNonce() {
+  const raw = crypto.randomUUID();
+  const encoded = new TextEncoder().encode(raw);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashed = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return { raw, hashed };
+}
 
 export default function AuthModal({ isOpen, onClose, onSuccess }) {
-  const [activeTab, setActiveTab] = useState('signup'); // 'signup' or 'login'
   const [loading, setLoading] = useState(false);
-  const [checkingUsername, setCheckingUsername] = useState(false);
-  const [shakeUsername, setShakeUsername] = useState(false);
-  
-  // Signup form state
-  const [signupForm, setSignupForm] = useState({
-    name: '',
-    email: '',
-    username: '',
-    password: ''
-  });
-  
-  // Login form state
-  const [loginForm, setLoginForm] = useState({
-    email: '',
-    password: ''
-  });
+  const [currentNonce, setCurrentNonce] = useState(null);
 
   useEffect(() => {
-    if (!isOpen || activeTab !== 'login') return;
-    
-    // Small timeout to ensure the DOM element exists
-    const timeoutId = setTimeout(() => {
-      if (window.google && document.getElementById("googleButton")) {
-        google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-          callback: handleGoogleSignIn,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        });
+    if (!isOpen) return;
 
-        google.accounts.id.renderButton(
-          document.getElementById("googleButton"),
-          { 
-            theme: "outline", 
-            size: "large",
-            width: "100%",
-            type: "standard", // This ensures it shows both icon and text
-            shape: "rectangular",
-            text: "signin_with",
-            locale: "en"
-          }
-        );
+    let cancelled = false;
 
-        google.accounts.id.prompt();
-      }
-    }, 0);
+    const initGoogle = async () => {
+      const nonce = await generateNonce();
+      if (cancelled) return;
+      setCurrentNonce(nonce.raw);
 
-    return () => clearTimeout(timeoutId);
-  }, [isOpen, activeTab]); // Add activeTab to dependencies
+      setTimeout(() => {
+        if (cancelled) return;
+        if (window.google && document.getElementById("googleButton")) {
+          google.accounts.id.initialize({
+            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+            callback: (response) => handleGoogleSignIn(response, nonce.raw),
+            auto_select: false,
+            cancel_on_tap_outside: true,
+            nonce: nonce.hashed,
+          });
 
-  const handleGoogleSignIn = async (response) => {
+          google.accounts.id.renderButton(
+            document.getElementById("googleButton"),
+            {
+              theme: "outline",
+              size: "large",
+              width: 320,
+              type: "standard",
+              shape: "rectangular",
+              text: "continue_with",
+              locale: "en"
+            }
+          );
+        }
+      }, 0);
+    };
+
+    initGoogle();
+    return () => { cancelled = true; };
+  }, [isOpen]);
+
+  const handleGoogleSignIn = async (response, nonce) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: response.credential,
+        nonce: nonce || currentNonce,
       });
 
       if (error) throw error;
 
       toast.success('Welcome!');
-      resetForms();
       onSuccess(data.user);
     } catch (error) {
       toast.error(error.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Username validation with debounce
-  const checkUsername = async (username) => {
-    if (!username) return;
-    
-    setCheckingUsername(true);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('username', username)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (data) {
-        toast.error('Username is already taken');
-        return false;
-      }
-      return true;
-    } catch (error) {
-      console.error('Error checking username:', error);
-      return false;
-    } finally {
-      setCheckingUsername(false);
-    }
-  };
-
-  const resetForms = () => {
-    setSignupForm({
-      name: '',
-      email: '',
-      username: '',
-      password: ''
-    });
-    setLoginForm({
-      email: '',
-      password: ''
-    });
-  };
-
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    
-    // Prevent submission if username is taken
-    if (shakeUsername) {
-      toast.error('Please choose a different username');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Validate username
-      const isUsernameAvailable = await checkUsername(signupForm.username);
-      if (!isUsernameAvailable) {
-        setLoading(false);
-        return;
-      }
-
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: signupForm.email,
-        password: signupForm.password,
-        options: {
-          data: {
-            name: signupForm.name,
-            username: signupForm.username,
-          }
-        }
-      });
-
-      if (authError) throw authError;
-
-      // Update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          name: signupForm.name,
-          username: signupForm.username,
-        })
-        .eq('id', authData.user.id);
-
-      if (profileError) throw profileError;
-
-      toast.success('Profile created!');
-      resetForms();
-      onSuccess(authData.user);
-    } catch (error) {
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginForm.email,
-        password: loginForm.password
-      });
-
-      if (error) throw error;
-      toast.success('Welcome back!');
-      resetForms();
-      onSuccess(data.user);
-    } catch (error) {
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUsernameChange = (e) => {
-    const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
-    // Only clear error state if the username actually changes
-    if (value !== signupForm.username) {
-      setShakeUsername(false);
-    }
-    setSignupForm({ ...signupForm, username: value });
-  };
-
-  const handleUsernameBlur = async (e) => {
-    const username = e.target.value;
-    if (!username) return;
-
-    setCheckingUsername(true);
-    try {
-      const isTaken = await usernameValidation(username, supabase);
-      if (isTaken) {
-        toast.error('Username already taken');
-        setShakeUsername(true);
-      }
-    } finally {
-      setCheckingUsername(false);
     }
   };
 
   if (!isOpen) return null;
 
-  const socialLoginButtons = (mode) => (
-    <div className="space-y-4 mb-6">
-      {mode === 'login' && (
-        <div id="googleButton" className="flex justify-center w-full !min-w-full">
-          {/* The '!min-w-full' class ensures the button takes full width */}
-        </div>
-      )}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-700"></div>
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-dark-card text-gray-400">
-            {mode === 'login' ? 'or login with email' : 'sign up with email'}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[100]">
-      <div className="bg-dark-card w-full max-w-md rounded-2xl border border-gray-800 p-8 mx-4 
-                    transform transition-all">
-        {/* Tabs */}
-        <div className="flex gap-4 mb-8">
-          <button
-            onClick={() => setActiveTab('signup')}
-            className={`flex-1 py-2 text-center rounded-lg transition-colors
-                      ${activeTab === 'signup' 
-                        ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/50' 
-                        : 'text-gray-400 hover:text-white'}`}
-          >
-            Sign Up
-          </button>
-          <button
-            onClick={() => setActiveTab('login')}
-            className={`flex-1 py-2 text-center rounded-lg transition-colors
-                      ${activeTab === 'login' 
-                        ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/50' 
-                        : 'text-gray-400 hover:text-white'}`}
-          >
-            Login
-          </button>
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-lg flex items-center justify-center z-[100]"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="relative bg-dark-elevated border border-white/[0.08] rounded-2xl
+                      shadow-2xl shadow-black/60 px-8 py-10 mx-4 w-full max-w-sm
+                      text-center space-y-6">
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center
+                     rounded-full text-gray-500 hover:text-white hover:bg-white/[0.06]
+                     transition-colors duration-200 text-lg"
+        >
+          &times;
+        </button>
+
+        {/* Heading */}
+        <div className="space-y-2">
+          <h2 className="text-xl font-display font-700 text-white tracking-tight">
+            Join the wall
+          </h2>
+          <p className="text-sm font-sans text-gray-500 leading-relaxed">
+            Track artists you've seen live
+          </p>
         </div>
 
-        {/* Signup Form */}
-        {activeTab === 'signup' && (
-          <>
-            {socialLoginButtons('signup')}
-            <form onSubmit={handleSignup} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={signupForm.name}
-                  onChange={(e) => setSignupForm({...signupForm, name: e.target.value})}
-                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
-                           text-white focus:outline-none focus:border-neon-pink"
-                  placeholder="Your name"
-                />
-              </div>
+        {/* Google Button */}
+        <div className="flex flex-col items-center gap-4">
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-gray-400 py-3">
+              <Spinner className="w-5 h-5" />
+              <span>Signing in...</span>
+            </div>
+          ) : (
+            <div id="googleButton" className="flex justify-center" />
+          )}
+        </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Username
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    value={signupForm.username}
-                    onChange={handleUsernameChange}
-                    onBlur={handleUsernameBlur}
-                    className={`w-full px-4 py-3 bg-dark border 
-                             ${shakeUsername ? 'border-red-500 shake' : 'border-gray-700'} 
-                             rounded-lg text-white focus:outline-none focus:border-neon-pink
-                             transition-colors duration-200`}
-                    placeholder="Choose a username"
-                  />
-                  {checkingUsername && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <Spinner className="w-5 h-5" />
-                    </div>
-                  )}
-                </div>
-                {shakeUsername && (
-                  <p className="mt-1 text-sm text-red-500">
-                    This username is already taken
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={signupForm.email}
-                  onChange={(e) => setSignupForm({...signupForm, email: e.target.value})}
-                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
-                           text-white focus:outline-none focus:border-neon-pink"
-                  placeholder="your@email.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={signupForm.password}
-                  onChange={(e) => setSignupForm({...signupForm, password: e.target.value})}
-                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
-                           text-white focus:outline-none focus:border-neon-pink"
-                  placeholder="Choose a password"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || checkingUsername}
-                className="w-full px-4 py-3 mt-6 bg-neon-pink/20 border border-neon-pink 
-                         text-neon-pink rounded-lg hover:bg-neon-pink/30 
-                         focus:outline-none focus:ring-2 focus:ring-neon-pink/50
-                         disabled:opacity-50 disabled:cursor-not-allowed
-                         font-medium transition-all duration-200
-                         flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Spinner className="w-5 h-5" />
-                    <span>Creating account...</span>
-                  </>
-                ) : (
-                  'Create Account'
-                )}
-              </button>
-            </form>
-          </>
-        )}
-
-        {/* Login Form */}
-        {activeTab === 'login' && (
-          <>
-            {socialLoginButtons('login')}
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={loginForm.email}
-                  onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
-                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
-                           text-white focus:outline-none focus:border-neon-pink"
-                  placeholder="your@email.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg 
-                           text-white focus:outline-none focus:border-neon-pink"
-                  placeholder="Your password"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full px-4 py-3 mt-6 bg-neon-pink/20 border border-neon-pink 
-                         text-neon-pink rounded-lg hover:bg-neon-pink/30 
-                         focus:outline-none focus:ring-2 focus:ring-neon-pink/50
-                         disabled:opacity-50 disabled:cursor-not-allowed
-                         font-medium transition-all duration-200
-                         flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Spinner className="w-5 h-5" />
-                    <span>Logging in...</span>
-                  </>
-                ) : (
-                  'Login'
-                )}
-              </button>
-            </form>
-          </>
-        )}
-
-        {/* Close button */}
-        <button
-          onClick={() => {
-            resetForms();
-            onClose();
-          }}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl"
-        >
-          ×
-        </button>
+        {/* Footer */}
+        <p className="text-[11px] text-gray-600 font-sans leading-relaxed">
+          By continuing, you agree to let us track your concert experiences
+        </p>
       </div>
     </div>
   );
-} 
+}

@@ -131,16 +131,22 @@ export default function Header({ onAuthClick }) {
                 </Menu.Items>
               </Menu>
             </div>
-          ) : !isHomePage ? (
+          ) : (
             <button
-              onClick={() => navigate("/")}
+              onClick={() => {
+                if (isHomePage) {
+                  onAuthClick();
+                } else {
+                  navigate("/");
+                }
+              }}
               className="px-3.5 py-1.5 text-xs font-sans font-500
                        text-neon-pink border border-neon-pink/30 rounded-full
                        hover:bg-neon-pink/10 transition-all duration-300"
             >
-              Create My Wall
+              {isHomePage ? "Sign in" : "Create My Wall"}
             </button>
-          ) : null}
+          )}
         </div>
       </div>
     </header>

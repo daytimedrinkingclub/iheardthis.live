@@ -8,6 +8,7 @@ import AuthModal from "./components/AuthModal";
 import { useState } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import PublicProfile from "./pages/PublicProfile";
+import GoogleOneTap from "./components/GoogleOneTap";
 
 function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -33,6 +34,7 @@ function App() {
             </Routes>
           </main>
           <Footer />
+          <GoogleOneTap />
           <AuthModal
             isOpen={isAuthModalOpen}
             onClose={() => setIsAuthModalOpen(false)}
