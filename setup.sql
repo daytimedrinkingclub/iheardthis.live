@@ -33,9 +33,13 @@ create table public.user_artist_experiences (
     user_id uuid references public.profiles on delete cascade,
     artist_id text references public.artists on delete cascade,
     event_name text,
+    venue text,
     city text,
     country text,
     attended_with uuid[] default array[]::uuid[],
+    rating integer,
+    notes text,
+    photos text[],
     created_at timestamp with time zone default timezone('utc'::text, now()),
     unique(user_id, artist_id)
 );

@@ -361,7 +361,7 @@ export default function AddExperienceModal({
                       <>
                         {userSearch.length > 3 ? (
                           <p className="p-4 text-center text-gray-400">
-                            No users found matching "{userSearch}"
+                            No users found matching &quot;{userSearch}&quot;
                           </p>
                         ) : null}
                       </>

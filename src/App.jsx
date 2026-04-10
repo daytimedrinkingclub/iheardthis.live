@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Toaster, toast } from "sonner";
+import { Toaster } from "sonner";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Profile from "./pages/Profile";
@@ -36,7 +36,7 @@ function App() {
           <AuthModal
             isOpen={isAuthModalOpen}
             onClose={() => setIsAuthModalOpen(false)}
-            onSuccess={(userData) => {
+            onSuccess={() => {
               setIsAuthModalOpen(false);
             }}
           />
