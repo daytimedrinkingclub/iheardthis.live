@@ -10,8 +10,10 @@ module.exports = {
       colors: {
         'neon-pink': '#ff2d55',
         'neon-blue': '#0ff',
-        'dark': '#121212',
+        'amber': '#f59e0b',
+        'dark': '#0e0e10',
         'dark-card': 'rgba(16, 16, 16, 0.6)',
+        'dark-elevated': 'rgba(24, 24, 28, 0.8)',
       },
       keyframes: {
         soundwave: {
@@ -45,8 +47,8 @@ module.exports = {
         'gradient-x': 'gradient-x 15s ease infinite',
       },
       fontFamily: {
-        sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
-        display: ['Space Grotesk', 'system-ui', 'sans-serif'],
+        sans: ['Outfit', 'system-ui', 'sans-serif'],
+        display: ['Syne', 'system-ui', 'sans-serif'],
       },
     },
   },
