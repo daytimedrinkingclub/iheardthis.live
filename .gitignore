@@ -29,3 +29,8 @@ dist-ssr
 
 .gemini/
 gha-creds-*.json
+
+# Migration (data import complete, contains secrets/data)
+migration/
+
+.omc/
