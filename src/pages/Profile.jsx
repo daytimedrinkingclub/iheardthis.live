@@ -91,7 +91,7 @@ export default function Profile() {
 
       if (error) throw error;
       if (data) setProfile(data);
-    } catch (error) {
+    } catch {
       toast.error('Error loading profile');
     } finally {
       setInitialLoading(false);
@@ -266,7 +266,7 @@ export default function Profile() {
               }}
               onBlur={async (e) => {
                 if (!e.target.value) return;
-                const { data, error } = await supabase
+                const { data } = await supabase
                   .from('profiles')
                   .select('username')
                   .eq('username', e.target.value)
