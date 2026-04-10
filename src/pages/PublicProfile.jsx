@@ -97,7 +97,7 @@ export default function PublicProfile() {
 
       <div className="relative z-10">
         {/* ── Profile Header ── */}
-        <div className="sticky top-0 pt-20 z-20 backdrop-blur-xl bg-dark/60 border-b border-white/[0.06]">
+        <div className="sticky top-0 pt-16 z-20 backdrop-blur-xl bg-dark/60 border-b border-white/[0.06]">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-7">
               {/* Avatar with glow ring */}
