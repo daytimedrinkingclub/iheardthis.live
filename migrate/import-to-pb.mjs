@@ -134,14 +134,22 @@ for (const u of usersDump) {
   }
 
   const tempPassword = randomPassword();
+  // PB requires email. Source data has emails wiped for most users; synthesize
+  // a placeholder so public profiles stay functional. Owner can reclaim by
+  // updating the email later via admin UI.
+  const username =
+    profile.username || u.raw_user_meta_data?.username || `user_${pbId.slice(0, 8)}`;
+  const email = u.email || `${username}@migrated.iheardthis.live`;
+  const isSynthetic = !u.email;
+
   const payload = {
     id: pbId,
-    email: u.email,
+    email,
     password: tempPassword,
     passwordConfirm: tempPassword,
     emailVisibility: false,
-    verified: true,
-    username: profile.username || `user_${pbId.slice(0, 8)}`,
+    verified: !isSynthetic,
+    username,
     name: profile.name || u.raw_user_meta_data?.name || '',
     country: profile.country || '',
     twitter_url: profile.twitter_url || '',
@@ -150,28 +158,31 @@ for (const u of usersDump) {
     youtube_url: profile.youtube_url || '',
   };
 
+  const recordCred = () => credentials.push({
+    email: payload.email,
+    username: payload.username,
+    temp_password: tempPassword,
+    synthetic_email: isSynthetic,
+  });
+
+  const tag = isSynthetic ? '(synthetic email)' : '';
   try {
     await pb.collection('users').create(payload);
-    credentials.push({
-      email: u.email,
-      username: payload.username,
-      temp_password: tempPassword,
-    });
-    console.log(`  created: ${u.email}`);
+    recordCred();
+    console.log(`  created ${tag}: ${payload.email}`);
   } catch (err) {
     const data = err?.response?.data;
     // Username collision: append suffix and retry once.
     if (data?.username?.code === 'validation_not_unique') {
       payload.username = `${payload.username}_${pbId.slice(0, 4)}`;
+      payload.email = isSynthetic
+        ? `${payload.username}@migrated.iheardthis.live`
+        : payload.email;
       await pb.collection('users').create(payload);
-      credentials.push({
-        email: u.email,
-        username: payload.username,
-        temp_password: tempPassword,
-      });
-      console.log(`  created (renamed): ${u.email} → @${payload.username}`);
+      recordCred();
+      console.log(`  created ${tag} (renamed): ${payload.email} → @${payload.username}`);
     } else {
-      console.error(`  FAILED: ${u.email}`, JSON.stringify(data || err.message));
+      console.error(`  FAILED: ${payload.email}`, JSON.stringify(data || err.message));
       throw err;
     }
   }
