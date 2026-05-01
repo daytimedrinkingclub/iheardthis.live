@@ -1,7 +1,7 @@
 import { Menu } from "@headlessui/react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase } from "../lib/supabase";
+import { pb } from "../lib/pb";
 import { toast } from "sonner";
 
 export default function Header({ onAuthClick }) {
@@ -11,7 +11,7 @@ export default function Header({ onAuthClick }) {
   const isHomePage = location.pathname === "/";
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    pb.authStore.clear();
     navigate("/");
     toast.success("Signed out successfully");
   };

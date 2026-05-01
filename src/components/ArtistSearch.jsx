@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { supabase } from "../lib/supabase";
+import { pb, normalizeUser } from "../lib/pb";
 import AddExperienceModal from "./AddExperienceModal";
 import { useAuth } from "../contexts/AuthContext";
 import Spinner from "./Spinner";
@@ -102,23 +102,22 @@ export default function ArtistSearch({ onAuthRequired }) {
     }
 
     try {
-      // First ensure artist exists in our DB
-      const { data: existingArtist } = await supabase
-        .from("artists")
-        .select()
-        .eq("id", artist.id)
-        .single();
-
-      if (!existingArtist) {
-        // Insert artist if not exists
-        await supabase.from("artists").insert({
-          id: artist.id,
-          name: artist.name,
-          image_url: artist.images[0]?.url,
-          spotify_url: artist.external_urls.spotify,
-          genres: artist.genres,
-          followers: artist.followers.total,
-        });
+      // First ensure artist exists in our DB (Spotify ID is used as the PB record ID)
+      try {
+        await pb.collection("artists").getOne(artist.id);
+      } catch (err) {
+        if (err?.status === 404) {
+          await pb.collection("artists").create({
+            id: artist.id,
+            name: artist.name,
+            image_url: artist.images[0]?.url,
+            spotify_url: artist.external_urls.spotify,
+            genres: artist.genres,
+            followers: artist.followers.total,
+          });
+        } else {
+          throw err;
+        }
       }
 
       // Show modal/form to add experience details
@@ -145,25 +144,14 @@ export default function ArtistSearch({ onAuthRequired }) {
 
   useEffect(() => {
     const fetchRecentUsers = async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(
-          `
-          id, 
-          avatar_url, 
-          username,
-          user_artist_experiences!inner(id)
-        `
-        )
-        .order("created_at", { ascending: false })
-        .limit(30);
-
-      if (!error && data && data.length > 0) {
-        // Clean up the data to match the existing structure
-        const cleanedData = data.map(
-          ({ user_artist_experiences, ...user }) => user
-        );
-        setRecentUsers(cleanedData);
+      try {
+        const result = await pb.collection("users").getList(1, 30, {
+          sort: "-created",
+          fields: "id,username,avatar,collectionId,collectionName",
+        });
+        setRecentUsers(result.items.map(normalizeUser));
+      } catch (error) {
+        console.error("Error fetching recent users:", error);
       }
     };
 

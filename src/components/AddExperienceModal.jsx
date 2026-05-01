@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
+import { pb, normalizeUser } from "../lib/pb";
 import { toast } from "sonner";
 import Spinner from "./Spinner";
 import { useAuth } from "../contexts/AuthContext";
@@ -28,16 +28,14 @@ export default function AddExperienceModal({
     const loadAttendedWithUsers = async () => {
       if (existingExperience?.attended_with?.length) {
         try {
-          const { data: users, error } = await supabase
-            .from("profiles")
-            .select("id, username, name, avatar_url")
-            .in("id", existingExperience.attended_with);
-
-          if (error) throw error;
+          const filter = existingExperience.attended_with
+            .map((id) => `id = "${id}"`)
+            .join(" || ");
+          const records = await pb.collection("users").getFullList({ filter });
 
           setFormData((prev) => ({
             ...prev,
-            attendedWith: users || [],
+            attendedWith: records.map(normalizeUser),
           }));
         } catch (error) {
           console.error("Error loading attended with users:", error);
@@ -72,15 +70,12 @@ export default function AddExperienceModal({
 
       setSearching(true);
       try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id, username, name, avatar_url")
-          .or(`username.ilike.%${cleanedSearch}%,name.ilike.%${cleanedSearch}%`)
-          .neq("id", user?.id) // Exclude current user
-          .limit(5);
-
-        if (error) throw error;
-        setSearchResults(data || []);
+        const escaped = cleanedSearch.replace(/"/g, '\\"');
+        const filter = `(username ~ "${escaped}" || name ~ "${escaped}")${
+          user?.id ? ` && id != "${user.id}"` : ""
+        }`;
+        const result = await pb.collection("users").getList(1, 5, { filter });
+        setSearchResults(result.items.map(normalizeUser));
       } catch (error) {
         console.error("Error searching users:", error);
         setSearchResults([]);
@@ -103,31 +98,20 @@ export default function AddExperienceModal({
 
     try {
       if (existingExperience) {
-        // Update existing experience
-        const { error } = await supabase
-          .from("user_artist_experiences")
-          .update({
-            event_name: formData.eventName || null,
-            city: formData.city || null,
-            attended_with: formData.attendedWith.map((u) => u.id),
-          })
-          .eq("id", existingExperience.id);
-
-        if (error) throw error;
+        await pb.collection("experiences").update(existingExperience.id, {
+          event_name: formData.eventName || null,
+          city: formData.city || null,
+          attended_with: formData.attendedWith.map((u) => u.id),
+        });
         toast.success("Experience updated successfully!");
       } else {
-        // Add new experience
-        const { error } = await supabase
-          .from("user_artist_experiences")
-          .insert({
-            user_id: user.id,
-            artist_id: artist.id,
-            event_name: formData.eventName || null,
-            city: formData.city || null,
-            attended_with: formData.attendedWith.map((u) => u.id),
-          });
-
-        if (error) throw error;
+        await pb.collection("experiences").create({
+          user_id: user.id,
+          artist_id: artist.id,
+          event_name: formData.eventName || null,
+          city: formData.city || null,
+          attended_with: formData.attendedWith.map((u) => u.id),
+        });
         toast.success("Experience added successfully!");
       }
 
