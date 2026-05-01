@@ -14,14 +14,14 @@ A platform for music enthusiasts to track and share their live music experiences
 
 - React + Vite
 - Tailwind CSS
-- Supabase (Auth & Database)
+- PocketBase (Auth, Database, Storage)
 - Spotify Web API
 
 ## Prerequisites
 
 - Node.js (v16 or higher)
 - npm or yarn
-- Supabase account
+- A running PocketBase instance (single binary, < 50 MB RAM)
 - Spotify Developer account
 
 ## Setup
@@ -38,36 +38,38 @@ A platform for music enthusiasts to track and share their live music experiences
    ```
 
 3. **Environment Variables**
-   
+
    Create a `.env` file in the root directory:
    ```env
    VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id
    VITE_SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_PB_URL=http://127.0.0.1:8090
    ```
 
-4. **Supabase Setup**
+4. **PocketBase Setup**
 
-   a. Create a new Supabase project
-   
-   b. Enable Email Auth in Authentication settings
-   
-   c. Create Storage bucket:
-      - Go to Storage in your Supabase dashboard
-      - Create a new bucket named "images"
-      - Make the bucket public
-   
-   d. Run the SQL setup script:
-      - Go to SQL Editor in your Supabase dashboard
-      - Copy contents from `setup.sql`
-      - Run the script
+   a. Download the binary for your platform from <https://pocketbase.io/docs/> and run it:
+      ```bash
+      ./pocketbase serve
+      ```
 
-   The setup includes:
-   - Database tables and relationships
-   - Row Level Security (RLS) policies
-   - Storage bucket for profile images
-   - Automated triggers and functions
+   b. Open the admin UI at <http://127.0.0.1:8090/_/> and create the first admin account.
+
+   c. Import the schema:
+      - Go to **Settings → Import collections**
+      - Paste the contents of `pb_schema.json`
+      - Click **Review** then **Confirm and import**
+
+   d. (Optional) Enable Google OAuth:
+      - Go to **Collections → users → Edit collection → Options → OAuth2**
+      - Toggle **Google** on and paste your Google OAuth client ID and secret
+      - Add your app's origin to your Google Cloud OAuth consent screen
+
+   The schema sets up:
+   - The built-in `users` auth collection extended with profile fields (name, country, social URLs, avatar file field)
+   - `artists` collection (Spotify ID is used as the record ID)
+   - `experiences` collection linking users to artists with a unique `(user_id, artist_id)` index
+   - Collection rules equivalent to the previous Supabase RLS policies
 
 5. **Start Development Server**
    ```bash
@@ -76,20 +78,20 @@ A platform for music enthusiasts to track and share their live music experiences
 
 ## Database Schema
 
-### Profiles
-- Extends Supabase auth.users
-- Stores user profile information
-- Contains social media links
+### users (auth collection)
+- Built-in PocketBase auth collection (email + password + optional OAuth2)
+- Extended with: `name`, `avatar` (file), `country`, `twitter_url`, `spotify_url`, `soundcloud_url`, `youtube_url`
+- The auth user record _is_ the profile — no separate profiles table
 
-### Artists
+### artists
 - Stores Spotify artist information
-- Uses Spotify ID as primary key
-- Includes genres and image URLs
+- Uses the Spotify ID as the record ID
+- Fields: `name`, `image_url`, `spotify_url`, `genres` (json), `followers`
 
-### User Artist Experiences
+### experiences
 - Links users with artists they've seen
-- Stores event details and ratings
-- Supports multiple attendees
+- Fields: `user_id`, `artist_id`, `event_name`, `city`, `country`, `attended_with` (multi-relation to users)
+- Unique constraint on `(user_id, artist_id)`
 
 ## Contributing
 
@@ -103,13 +105,6 @@ A platform for music enthusiasts to track and share their live music experiences
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Storage Structure
+## File Storage
 
-### Images Bucket
-- Purpose: Stores user profile pictures and other images
-- Access: Public read, authenticated write
-- Location: `storage.objects` with bucket_id 'images'
-- Policies:
-  - Public can view all images
-  - Authenticated users can upload images
-  - Files are served via Supabase CDN
+Profile pictures are stored as the `avatar` file field on the `users` collection. PocketBase generates thumbnails automatically (`100x100`, `300x300`) and serves the file at `${VITE_PB_URL}/api/files/<collectionId>/<recordId>/<filename>`. The frontend uses `pb.files.getUrl(record, record.avatar)` to build URLs.

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { pb, normalizeUser, normalizeExperience } from "../lib/pb";
 import { motion, AnimatePresence } from "framer-motion";
 import WaveLoader from "../components/WaveLoader";
 import { toast } from "sonner";
@@ -18,29 +18,19 @@ export default function PublicProfile() {
 
   const loadProfileAndExperiences = async () => {
     try {
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("username", username)
-        .single();
+      const profileRecord = await pb
+        .collection("users")
+        .getFirstListItem(`username = "${username}"`);
+      const normalizedProfile = normalizeUser(profileRecord);
+      setProfile(normalizedProfile);
 
-      if (profileError) throw profileError;
-      setProfile(profileData);
+      const experiencesData = await pb.collection("experiences").getFullList({
+        filter: `user_id = "${profileRecord.id}"`,
+        expand: "artist_id",
+        sort: "-created",
+      });
 
-      const { data: experiencesData, error: experiencesError } = await supabase
-        .from("user_artist_experiences")
-        .select(
-          `
-          *,
-          artist:artists(*)
-        `
-        )
-        .eq("user_id", profileData.id)
-        .order("created_at", { ascending: false });
-
-      if (experiencesError) throw experiencesError;
-
-      setExperiences(experiencesData);
+      setExperiences(experiencesData.map(normalizeExperience));
     } catch (error) {
       console.error("Error loading profile:", error);
     } finally {

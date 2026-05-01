@@ -32,5 +32,7 @@ gha-creds-*.json
 
 # Migration (data import complete, contains secrets/data)
 migration/
+migrate/out/
+migrate/.env
 
 .omc/

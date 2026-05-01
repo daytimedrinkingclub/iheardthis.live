@@ -1,0 +1,206 @@
+[
+  {
+    "id": "_pb_users_auth_",
+    "name": "users",
+    "type": "auth",
+    "system": false,
+    "schema": [
+      {
+        "id": "users_name",
+        "name": "name",
+        "type": "text",
+        "required": false,
+        "options": { "min": null, "max": null, "pattern": "" }
+      },
+      {
+        "id": "users_avatar",
+        "name": "avatar",
+        "type": "file",
+        "required": false,
+        "options": {
+          "maxSelect": 1,
+          "maxSize": 5242880,
+          "mimeTypes": ["image/jpeg", "image/png", "image/webp", "image/gif"],
+          "thumbs": ["100x100", "300x300"]
+        }
+      },
+      {
+        "id": "users_country",
+        "name": "country",
+        "type": "text",
+        "required": false,
+        "options": { "min": null, "max": 2, "pattern": "" }
+      },
+      {
+        "id": "users_twitter_url",
+        "name": "twitter_url",
+        "type": "url",
+        "required": false,
+        "options": { "exceptDomains": [], "onlyDomains": [] }
+      },
+      {
+        "id": "users_spotify_url",
+        "name": "spotify_url",
+        "type": "url",
+        "required": false,
+        "options": { "exceptDomains": [], "onlyDomains": [] }
+      },
+      {
+        "id": "users_soundcloud_url",
+        "name": "soundcloud_url",
+        "type": "url",
+        "required": false,
+        "options": { "exceptDomains": [], "onlyDomains": [] }
+      },
+      {
+        "id": "users_youtube_url",
+        "name": "youtube_url",
+        "type": "url",
+        "required": false,
+        "options": { "exceptDomains": [], "onlyDomains": [] }
+      }
+    ],
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "",
+    "updateRule": "id = @request.auth.id",
+    "deleteRule": "id = @request.auth.id",
+    "options": {
+      "allowEmailAuth": true,
+      "allowOAuth2Auth": true,
+      "allowUsernameAuth": true,
+      "exceptEmailDomains": null,
+      "manageRule": null,
+      "minPasswordLength": 8,
+      "onlyEmailDomains": null,
+      "requireEmail": true
+    }
+  },
+  {
+    "id": "artists_collection",
+    "name": "artists",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "id": "artists_name",
+        "name": "name",
+        "type": "text",
+        "required": true,
+        "options": { "min": 1, "max": null, "pattern": "" }
+      },
+      {
+        "id": "artists_image_url",
+        "name": "image_url",
+        "type": "url",
+        "required": false,
+        "options": { "exceptDomains": [], "onlyDomains": [] }
+      },
+      {
+        "id": "artists_spotify_url",
+        "name": "spotify_url",
+        "type": "url",
+        "required": true,
+        "options": { "exceptDomains": [], "onlyDomains": [] }
+      },
+      {
+        "id": "artists_genres",
+        "name": "genres",
+        "type": "json",
+        "required": false,
+        "options": { "maxSize": 5000 }
+      },
+      {
+        "id": "artists_followers",
+        "name": "followers",
+        "type": "number",
+        "required": false,
+        "options": { "min": null, "max": null, "noDecimal": true }
+      }
+    ],
+    "indexes": [],
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "@request.auth.id != \"\"",
+    "updateRule": null,
+    "deleteRule": null,
+    "options": {}
+  },
+  {
+    "id": "experiences_collection",
+    "name": "experiences",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "id": "exp_user_id",
+        "name": "user_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "_pb_users_auth_",
+          "cascadeDelete": true,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": []
+        }
+      },
+      {
+        "id": "exp_artist_id",
+        "name": "artist_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "artists_collection",
+          "cascadeDelete": true,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": []
+        }
+      },
+      {
+        "id": "exp_event_name",
+        "name": "event_name",
+        "type": "text",
+        "required": false,
+        "options": { "min": null, "max": null, "pattern": "" }
+      },
+      {
+        "id": "exp_city",
+        "name": "city",
+        "type": "text",
+        "required": false,
+        "options": { "min": null, "max": null, "pattern": "" }
+      },
+      {
+        "id": "exp_country",
+        "name": "country",
+        "type": "text",
+        "required": false,
+        "options": { "min": null, "max": 2, "pattern": "" }
+      },
+      {
+        "id": "exp_attended_with",
+        "name": "attended_with",
+        "type": "relation",
+        "required": false,
+        "options": {
+          "collectionId": "_pb_users_auth_",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": null,
+          "displayFields": []
+        }
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_experiences_user_artist ON experiences (user_id, artist_id)"
+    ],
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "@request.auth.id = user_id",
+    "updateRule": "@request.auth.id = user_id",
+    "deleteRule": "@request.auth.id = user_id",
+    "options": {}
+  }
+]
