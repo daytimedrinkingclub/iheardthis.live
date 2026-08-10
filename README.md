@@ -45,6 +45,8 @@ A platform for music enthusiasts to track and share their live music experiences
    VITE_SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
    VITE_SUPABASE_URL=your_supabase_url
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   # Optional: independent endpoint for browser-side incident reports
+   VITE_CLIENT_LOG_ENDPOINT=https://your-log-collector.example.com/events
    ```
 
 4. **Supabase Setup**
