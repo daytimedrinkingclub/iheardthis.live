@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { supabase } from "../lib/supabase";
+import { reportClientError } from "../lib/clientDiagnostics";
 import AddExperienceModal from "./AddExperienceModal";
 import { useAuth } from "../contexts/AuthContext";
 import Spinner from "./Spinner";
@@ -18,6 +19,8 @@ export default function ArtistSearch({ onAuthRequired }) {
   const { userExperiences, user } = useAuth();
   const [hasSearched, setHasSearched] = useState(false);
   const [recentUsers, setRecentUsers] = useState([]);
+  const [recentUsersError, setRecentUsersError] = useState(false);
+  const [loadingRecentUsers, setLoadingRecentUsers] = useState(true);
 
   // Get Spotify access token on component mount
   useEffect(() => {
@@ -143,14 +146,17 @@ export default function ArtistSearch({ onAuthRequired }) {
     }
   };
 
-  useEffect(() => {
-    const fetchRecentUsers = async () => {
+  const fetchRecentUsers = useCallback(async () => {
+    setLoadingRecentUsers(true);
+    setRecentUsersError(false);
+
+    try {
       const { data, error } = await supabase
         .from("profiles")
         .select(
           `
-          id, 
-          avatar_url, 
+          id,
+          avatar_url,
           username,
           user_artist_experiences!inner(id)
         `
@@ -158,17 +164,29 @@ export default function ArtistSearch({ onAuthRequired }) {
         .order("created_at", { ascending: false })
         .limit(30);
 
-      if (!error && data && data.length > 0) {
-        // Clean up the data to match the existing structure
-        const cleanedData = data.map(
-          ({ user_artist_experiences, ...user }) => user
-        );
-        setRecentUsers(cleanedData);
+      if (error) {
+        throw error;
       }
-    };
 
-    fetchRecentUsers();
+      const cleanedData = (data ?? []).map(
+        ({ user_artist_experiences, ...recentUser }) => recentUser
+      );
+      setRecentUsers(cleanedData);
+    } catch (error) {
+      reportClientError(
+        "Unable to load the public profile wall",
+        { feature: "recent-profiles" },
+        error
+      );
+      setRecentUsersError(true);
+    } finally {
+      setLoadingRecentUsers(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchRecentUsers();
+  }, [fetchRecentUsers]);
 
   useEffect(() => {
     if (selectedArtist) {
@@ -335,6 +353,23 @@ export default function ArtistSearch({ onAuthRequired }) {
                     Search for your favorite artists and create your personal
                     live music history
                   </p>
+                  {loadingRecentUsers && (
+                    <p className="mt-4 text-sm text-gray-500" role="status">
+                      Loading the community wall…
+                    </p>
+                  )}
+                  {recentUsersError && (
+                    <div className="mt-4 text-sm text-gray-400" role="alert">
+                      <p>We couldn&apos;t load the community wall.</p>
+                      <button
+                        type="button"
+                        onClick={fetchRecentUsers}
+                        className="mt-2 text-neon-pink hover:text-white transition-colors"
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  )}
                 </motion.div>
               </div>
             )}
